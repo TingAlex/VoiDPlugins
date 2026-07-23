@@ -44,6 +44,16 @@ namespace VoiDPlugins.Filter
         [SliderProperty("Precision Multiplier", 0.0f, 10f, 0.3f), DefaultPropertyValue(0.3f)]
         public float Scale { get; set; }
 
+        [BooleanProperty("Show Precision Border", "Show a translucent, click-through border around the precision area.")]
+        [DefaultPropertyValue(true)]
+        public bool ShowBorder { get; set; } = true;
+
+        [SliderProperty("Border Thickness", 1.0f, 6.0f, 1.0f), DefaultPropertyValue(2.0f)]
+        public float BorderThickness { get; set; } = 2.0f;
+
+        [SliderProperty("Border Opacity", 0.1f, 0.9f, 0.05f), DefaultPropertyValue(0.55f)]
+        public float BorderOpacity { get; set; } = 0.55f;
+
         [TabletReference]
         public TabletReference? Tablet { get; set; }
 
@@ -129,21 +139,48 @@ namespace VoiDPlugins.Filter
                 case PrecisionControlAction.Toggle:
                     _isActive = !_isActive;
                     if (_isActive)
+                    {
                         _startingPoint = currentPosition;
+                        ShowPrecisionBorder();
+                    }
+                    else
+                    {
+                        _overlay?.Hide();
+                    }
                     break;
                 case PrecisionControlAction.Activate:
                     _isActive = true;
                     _startingPoint = currentPosition;
+                    ShowPrecisionBorder();
                     break;
                 case PrecisionControlAction.Deactivate:
                     _isActive = false;
+                    _overlay?.Hide();
                     break;
             }
+        }
+
+        private void ShowPrecisionBorder()
+        {
+            if (!ShowBorder)
+            {
+                _overlay?.Hide();
+                return;
+            }
+
+            _overlay ??= PrecisionControlOverlayFactory.Create();
+            _overlay?.Show(
+                _startingPoint,
+                Scale,
+                BorderThickness,
+                BorderOpacity);
         }
 
         public void Dispose()
         {
             PrecisionControlCoordinator.Unregister(this);
+            _overlay?.Dispose();
+            _overlay = null;
         }
 
         private readonly ConcurrentQueue<PrecisionControlAction> _pendingActions = new();
@@ -153,6 +190,11 @@ namespace VoiDPlugins.Filter
         private long _lastInRangeTimestamp;
         private int _pendingGlobalToggleCount;
         private readonly object _rangeLock = new();
+        internal IPrecisionControlOverlay? Overlay
+        {
+            set => _overlay = value;
+        }
+        private IPrecisionControlOverlay? _overlay;
     }
 
     internal enum PrecisionControlAction

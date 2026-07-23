@@ -37,6 +37,12 @@ The global hotkey is a toggle. A hotkey received while the pen is out of range
 is ignored. If multiple tablets have an in-range pen, the most recently active
 tablet is selected.
 
+When precision mode is active on Windows, the filter displays a thin,
+semi-transparent ice-blue border around the effective precision area. The
+border is always on top, does not take focus, and lets mouse and pen input pass
+through. Its visibility, thickness, and opacity can be configured on the
+Precision Control filter.
+
 See Microsoft's
 [touch gesture documentation](https://support.microsoft.com/windows/touch-gestures-for-windows-a9d28305-4818-a5df-4e2b-e5590f850741)
 for Windows Precision Touchpad gesture configuration.
