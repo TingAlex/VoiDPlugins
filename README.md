@@ -20,6 +20,27 @@ VoiDPlugins is a collection of extensions for [OpenTabletDriver](https://github.
 
       Dynamic sensitivity switching
 
+#### Windows global hotkey
+
+The PrecisionControl assembly also provides a `Precision Control Global Hotkey`
+tool on Windows. It uses `RegisterHotKey`, not a low-level keyboard hook, and
+only queues a precision toggle while a pen is in range on a tablet that has the
+Precision Control filter enabled.
+
+1. Enable the `Precision Control` filter and choose a precision multiplier.
+2. Enable the `Precision Control Global Hotkey` tool.
+3. Configure its key and modifiers. The default is `Ctrl+Alt+Shift+P`.
+4. In Windows, open **Settings > Bluetooth & devices > Touchpad > Advanced
+   gestures** and record the same custom shortcut for **Three-finger tap**.
+
+The global hotkey is a toggle. A hotkey received while the pen is out of range
+is ignored. If multiple tablets have an in-range pen, the most recently active
+tablet is selected.
+
+See Microsoft's
+[touch gesture documentation](https://support.microsoft.com/windows/touch-gestures-for-windows-a9d28305-4818-a5df-4e2b-e5590f850741)
+for Windows Precision Touchpad gesture configuration.
+
 ## Output Modes
 
 ### [WindowsInk](https://github.com/X9VoiD/VoiDPlugins/wiki/WindowsInk)
