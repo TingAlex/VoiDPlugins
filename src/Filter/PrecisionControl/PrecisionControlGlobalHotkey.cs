@@ -4,107 +4,9 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using System.Threading;
 using OpenTabletDriver.Plugin;
-using OpenTabletDriver.Plugin.Attributes;
 
 namespace VoiDPlugins.Filter
 {
-    [PluginName("Precision Control Global Hotkey")]
-    [SupportedPlatform(PluginPlatform.Windows)]
-    public sealed class PrecisionControlGlobalHotkey : ITool
-    {
-        public static string[] ValidKeys => GlobalHotkeyKeyMap.Keys.ToArray();
-
-        [Property("Key"), PropertyValidated(nameof(ValidKeys)), DefaultPropertyValue("P")]
-        public string? Key { get; set; }
-
-        [BooleanProperty("Ctrl", "Require the Ctrl key."), DefaultPropertyValue(true)]
-        public bool Ctrl { get; set; }
-
-        [BooleanProperty("Alt", "Require the Alt key."), DefaultPropertyValue(true)]
-        public bool Alt { get; set; }
-
-        [BooleanProperty("Shift", "Require the Shift key."), DefaultPropertyValue(true)]
-        public bool Shift { get; set; }
-
-        [BooleanProperty("Windows", "Require the Windows key."), DefaultPropertyValue(false)]
-        public bool Windows { get; set; }
-
-        public bool Initialize()
-        {
-            if (string.IsNullOrWhiteSpace(Key) ||
-                !GlobalHotkeyKeyMap.TryGetVirtualKey(Key, out var virtualKey))
-            {
-                Log.Write(nameof(PrecisionControlGlobalHotkey),
-                    $"Unsupported global hotkey key '{Key}'.", LogLevel.Error);
-                return false;
-            }
-
-            var modifiers = HotkeyModifiers.NoRepeat;
-            if (Ctrl)
-                modifiers |= HotkeyModifiers.Control;
-            if (Alt)
-                modifiers |= HotkeyModifiers.Alt;
-            if (Shift)
-                modifiers |= HotkeyModifiers.Shift;
-            if (Windows)
-                modifiers |= HotkeyModifiers.Windows;
-
-            if ((modifiers & ~HotkeyModifiers.NoRepeat) == 0)
-            {
-                Log.Write(nameof(PrecisionControlGlobalHotkey),
-                    "At least one modifier is required for the global hotkey.", LogLevel.Error);
-                return false;
-            }
-
-            _listener = new GlobalHotkeyListener(modifiers, virtualKey, OnHotkeyPressed);
-            if (!_listener.Start(out var error))
-            {
-                Log.Write(nameof(PrecisionControlGlobalHotkey),
-                    $"Unable to register global hotkey {FormatHotkey()}. Win32 error: {error}.",
-                    LogLevel.Error);
-                _listener.Dispose();
-                _listener = null;
-                return false;
-            }
-
-            Log.Write(nameof(PrecisionControlGlobalHotkey),
-                $"Registered global hotkey {FormatHotkey()}. The hotkey toggles precision only while a pen is in range.");
-            return true;
-        }
-
-        public void Dispose()
-        {
-            _listener?.Dispose();
-            _listener = null;
-        }
-
-        private void OnHotkeyPressed()
-        {
-            if (!PrecisionControlCoordinator.TryQueueGlobalToggle())
-            {
-                Log.Debug(nameof(PrecisionControlGlobalHotkey),
-                    "Ignored global hotkey because no Precision Control pen is in range.");
-            }
-        }
-
-        private string FormatHotkey()
-        {
-            var parts = new List<string>();
-            if (Ctrl)
-                parts.Add("Ctrl");
-            if (Alt)
-                parts.Add("Alt");
-            if (Shift)
-                parts.Add("Shift");
-            if (Windows)
-                parts.Add("Win");
-            parts.Add(Key ?? string.Empty);
-            return string.Join("+", parts);
-        }
-
-        private GlobalHotkeyListener? _listener;
-    }
-
     internal static class GlobalHotkeyKeyMap
     {
         public static string[] Keys { get; } =
@@ -148,6 +50,187 @@ namespace VoiDPlugins.Filter
 
             virtualKey = 0;
             return false;
+        }
+    }
+
+    internal static class PrecisionControlGlobalHotkeyManager
+    {
+        public static void Register(PrecisionControl filter)
+        {
+            lock (_syncRoot)
+            {
+                if (!_filters.Contains(filter))
+                    _filters.Add(filter);
+
+                RebuildListeners();
+            }
+        }
+
+        public static void Unregister(PrecisionControl filter)
+        {
+            lock (_syncRoot)
+            {
+                _filters.Remove(filter);
+                RebuildListeners();
+            }
+        }
+
+        public static bool Matches(
+            PrecisionControl filter,
+            HotkeyGesture gesture)
+        {
+            return TryCreateConfiguration(
+                filter,
+                out var candidate,
+                out _) &&
+                candidate.Equals(gesture);
+        }
+
+        private static void RebuildListeners()
+        {
+            foreach (var listener in _listeners.Values)
+                listener.Dispose();
+            _listeners.Clear();
+
+            foreach (var filter in _filters)
+            {
+                if (!filter.EnableGlobalHotkey)
+                    continue;
+
+                if (!TryCreateConfiguration(
+                    filter,
+                    out var gesture,
+                    out var errorMessage))
+                {
+                    Log.Write(nameof(PrecisionControl),
+                        errorMessage,
+                        LogLevel.Error);
+                    continue;
+                }
+
+                if (_listeners.ContainsKey(gesture))
+                    continue;
+
+                var listener = new GlobalHotkeyListener(
+                    gesture.Modifiers,
+                    gesture.VirtualKey,
+                    () => OnHotkeyPressed(gesture));
+                if (!listener.Start(out var error))
+                {
+                    Log.Write(nameof(PrecisionControl),
+                        $"Unable to register global hotkey {gesture.DisplayText}. Win32 error: {error}.",
+                        LogLevel.Error);
+                    listener.Dispose();
+                    continue;
+                }
+
+                _listeners.Add(gesture, listener);
+                Log.Write(nameof(PrecisionControl),
+                    $"Registered global hotkey {gesture.DisplayText}. The hotkey toggles precision only while a pen is in range.");
+            }
+        }
+
+        private static bool TryCreateConfiguration(
+            PrecisionControl filter,
+            out HotkeyGesture gesture,
+            out string errorMessage)
+        {
+            gesture = default;
+            if (string.IsNullOrWhiteSpace(filter.GlobalHotkeyKey) ||
+                !GlobalHotkeyKeyMap.TryGetVirtualKey(
+                    filter.GlobalHotkeyKey,
+                    out var virtualKey))
+            {
+                errorMessage =
+                    $"Unsupported global hotkey key '{filter.GlobalHotkeyKey}'.";
+                return false;
+            }
+
+            var modifiers = HotkeyModifiers.NoRepeat;
+            if (filter.HotkeyCtrl)
+                modifiers |= HotkeyModifiers.Control;
+            if (filter.HotkeyAlt)
+                modifiers |= HotkeyModifiers.Alt;
+            if (filter.HotkeyShift)
+                modifiers |= HotkeyModifiers.Shift;
+            if (filter.HotkeyWindows)
+                modifiers |= HotkeyModifiers.Windows;
+
+            if ((modifiers & ~HotkeyModifiers.NoRepeat) == 0)
+            {
+                errorMessage =
+                    "At least one modifier is required for the global hotkey.";
+                return false;
+            }
+
+            gesture = new HotkeyGesture(
+                modifiers,
+                virtualKey,
+                FormatHotkey(filter));
+            errorMessage = string.Empty;
+            return true;
+        }
+
+        private static void OnHotkeyPressed(HotkeyGesture gesture)
+        {
+            if (!PrecisionControlCoordinator.TryQueueGlobalToggle(gesture))
+            {
+                Log.Debug(nameof(PrecisionControl),
+                    "Ignored global hotkey because no Precision Control pen is in range.");
+            }
+        }
+
+        private static string FormatHotkey(PrecisionControl filter)
+        {
+            var parts = new List<string>();
+            if (filter.HotkeyCtrl)
+                parts.Add("Ctrl");
+            if (filter.HotkeyAlt)
+                parts.Add("Alt");
+            if (filter.HotkeyShift)
+                parts.Add("Shift");
+            if (filter.HotkeyWindows)
+                parts.Add("Win");
+            parts.Add(filter.GlobalHotkeyKey ?? string.Empty);
+            return string.Join("+", parts);
+        }
+
+        private static readonly object _syncRoot = new();
+        private static readonly List<PrecisionControl> _filters = new();
+        private static readonly Dictionary<HotkeyGesture, GlobalHotkeyListener>
+            _listeners = new();
+    }
+
+    internal readonly struct HotkeyGesture : IEquatable<HotkeyGesture>
+    {
+        public HotkeyGesture(
+            HotkeyModifiers modifiers,
+            uint virtualKey,
+            string displayText)
+        {
+            Modifiers = modifiers;
+            VirtualKey = virtualKey;
+            DisplayText = displayText;
+        }
+
+        public HotkeyModifiers Modifiers { get; }
+        public uint VirtualKey { get; }
+        public string DisplayText { get; }
+
+        public bool Equals(HotkeyGesture other)
+        {
+            return Modifiers == other.Modifiers &&
+                VirtualKey == other.VirtualKey;
+        }
+
+        public override bool Equals(object? obj)
+        {
+            return obj is HotkeyGesture other && Equals(other);
+        }
+
+        public override int GetHashCode()
+        {
+            return HashCode.Combine((uint)Modifiers, VirtualKey);
         }
     }
 

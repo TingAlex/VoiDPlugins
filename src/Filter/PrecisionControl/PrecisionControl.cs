@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using System.Numerics;
+using System.Runtime.InteropServices;
 using System.Threading;
 using OpenTabletDriver.Plugin;
 using OpenTabletDriver.Plugin.Attributes;
@@ -13,7 +14,7 @@ using OpenTabletDriver.Plugin.Tablet;
 
 namespace VoiDPlugins.Filter
 {
-    [PluginName("Precision Control")]
+    [PluginName("Precision Control (TingAlex Enhanced)")]
     public class PrecisionControlBinding : IStateBinding
     {
         public static string[] ValidModes => new[] { "Toggle", "Hold" };
@@ -36,9 +37,11 @@ namespace VoiDPlugins.Filter
         }
     }
 
-    [PluginName("Precision Control")]
+    [PluginName("Precision Control (TingAlex Enhanced)")]
     public class PrecisionControl : IPositionedPipelineElement<IDeviceReport>, IDisposable
     {
+        public static string[] ValidGlobalHotkeyKeys => GlobalHotkeyKeyMap.Keys.ToArray();
+
         public event Action<IDeviceReport>? Emit;
 
         [SliderProperty("Precision Multiplier", 0.0f, 10f, 0.3f), DefaultPropertyValue(0.3f)]
@@ -51,8 +54,31 @@ namespace VoiDPlugins.Filter
         [SliderProperty("Border Thickness", 1.0f, 6.0f, 1.0f), DefaultPropertyValue(2.0f)]
         public float BorderThickness { get; set; } = 2.0f;
 
-        [SliderProperty("Border Opacity", 0.1f, 0.9f, 0.05f), DefaultPropertyValue(0.55f)]
-        public float BorderOpacity { get; set; } = 0.55f;
+        [Property("Border Color (#RRGGBB)"), DefaultPropertyValue(BorderColorParser.DefaultColor)]
+        public string? BorderColor { get; set; } = BorderColorParser.DefaultColor;
+
+        [SliderProperty("Border Opacity", 0.05f, 1.0f, 0.05f), DefaultPropertyValue(0.4f)]
+        public float BorderOpacity { get; set; } = 0.4f;
+
+        [BooleanProperty("Enable Global Hotkey", "Let a Windows shortcut toggle precision while the pen is in range.")]
+        [DefaultPropertyValue(true)]
+        public bool EnableGlobalHotkey { get; set; } = true;
+
+        [Property("Global Hotkey Key"), PropertyValidated(nameof(ValidGlobalHotkeyKeys))]
+        [DefaultPropertyValue("P")]
+        public string? GlobalHotkeyKey { get; set; } = "P";
+
+        [BooleanProperty("Hotkey Ctrl", "Require the Ctrl key."), DefaultPropertyValue(true)]
+        public bool HotkeyCtrl { get; set; } = true;
+
+        [BooleanProperty("Hotkey Alt", "Require the Alt key."), DefaultPropertyValue(true)]
+        public bool HotkeyAlt { get; set; } = true;
+
+        [BooleanProperty("Hotkey Shift", "Require the Shift key."), DefaultPropertyValue(true)]
+        public bool HotkeyShift { get; set; } = true;
+
+        [BooleanProperty("Hotkey Windows", "Require the Windows key."), DefaultPropertyValue(false)]
+        public bool HotkeyWindows { get; set; }
 
         [TabletReference]
         public TabletReference? Tablet { get; set; }
@@ -74,6 +100,8 @@ namespace VoiDPlugins.Filter
         public void Initialize()
         {
             PrecisionControlCoordinator.Register(this);
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                PrecisionControlGlobalHotkeyManager.Register(this);
         }
 
         public void Consume(IDeviceReport value)
@@ -160,7 +188,16 @@ namespace VoiDPlugins.Filter
                 return;
             }
 
-            _overlay ??= PrecisionControlOverlayFactory.Create();
+            var borderColor = 0u;
+            if (!BorderColorParser.TryParse(BorderColor, out borderColor))
+            {
+                Log.Write(
+                    nameof(PrecisionControl),
+                    $"Invalid border color '{BorderColor}'. Using {BorderColorParser.DefaultColor}.",
+                    LogLevel.Warning);
+            }
+
+            _overlay ??= PrecisionControlOverlayFactory.Create(borderColor);
             _overlay?.Show(
                 _startingPoint,
                 Scale,
@@ -170,6 +207,7 @@ namespace VoiDPlugins.Filter
 
         public void Dispose()
         {
+            PrecisionControlGlobalHotkeyManager.Unregister(this);
             PrecisionControlCoordinator.Unregister(this);
             _overlay?.Dispose();
             _overlay = null;
@@ -223,12 +261,18 @@ namespace VoiDPlugins.Filter
             }
         }
 
-        public static bool TryQueueGlobalToggle()
+        public static bool TryQueueGlobalToggle(HotkeyGesture? gesture = null)
         {
             lock (_syncRoot)
             {
                 var filter = _filters
-                    .Where(candidate => candidate.PenInRange)
+                    .Where(candidate =>
+                        candidate.EnableGlobalHotkey &&
+                        candidate.PenInRange &&
+                        (!gesture.HasValue ||
+                            PrecisionControlGlobalHotkeyManager.Matches(
+                                candidate,
+                                gesture.Value)))
                     .OrderByDescending(candidate => candidate.LastInRangeTimestamp)
                     .FirstOrDefault();
 

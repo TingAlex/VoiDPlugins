@@ -1,4 +1,5 @@
 using System;
+using System.Globalization;
 using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Threading;
@@ -14,14 +15,14 @@ namespace VoiDPlugins.Filter
 
     internal static class PrecisionControlOverlayFactory
     {
-        public static IPrecisionControlOverlay? Create()
+        public static IPrecisionControlOverlay? Create(uint borderColor)
         {
             if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 return null;
 
             try
             {
-                return new WindowsPrecisionControlOverlay();
+                return new WindowsPrecisionControlOverlay(borderColor);
             }
             catch (Exception exception)
             {
@@ -31,6 +32,35 @@ namespace VoiDPlugins.Filter
                     LogLevel.Warning);
                 return null;
             }
+        }
+    }
+
+    internal static class BorderColorParser
+    {
+        public const string DefaultColor = "#000000";
+
+        public static bool TryParse(string? value, out uint colorReference)
+        {
+            var hex = value?.Trim();
+            if (hex?.StartsWith("#", StringComparison.Ordinal) == true)
+                hex = hex.Substring(1);
+
+            if (hex?.Length == 6 &&
+                uint.TryParse(
+                    hex,
+                    NumberStyles.AllowHexSpecifier,
+                    CultureInfo.InvariantCulture,
+                    out var rgb))
+            {
+                var red = (rgb >> 16) & 0xff;
+                var green = (rgb >> 8) & 0xff;
+                var blue = rgb & 0xff;
+                colorReference = red | (green << 8) | (blue << 16);
+                return true;
+            }
+
+            colorReference = 0;
+            return false;
         }
     }
 
@@ -80,8 +110,9 @@ namespace VoiDPlugins.Filter
 
     internal sealed class WindowsPrecisionControlOverlay : IPrecisionControlOverlay
     {
-        public WindowsPrecisionControlOverlay()
+        public WindowsPrecisionControlOverlay(uint borderColor)
         {
+            _borderColor = borderColor;
             _windowProcedure = WindowProcedure;
             _thread = new Thread(MessageLoop)
             {
@@ -158,7 +189,7 @@ namespace VoiDPlugins.Filter
                     return;
 
                 _className = $"PrecisionControlBorder-{Guid.NewGuid():N}";
-                _brush = OverlayNativeMethods.CreateSolidBrush(GlassBorderColor);
+                _brush = OverlayNativeMethods.CreateSolidBrush(_borderColor);
                 if (_brush == IntPtr.Zero)
                 {
                     _ready.Set();
@@ -375,7 +406,6 @@ namespace VoiDPlugins.Filter
 
         private const uint ShowMessage = OverlayNativeMethods.WM_APP + 1;
         private const uint HideMessage = OverlayNativeMethods.WM_APP + 2;
-        private const uint GlassBorderColor = 0x00FFF2D6;
         private const uint ExtendedWindowStyle =
             OverlayNativeMethods.WS_EX_LAYERED |
             OverlayNativeMethods.WS_EX_TRANSPARENT |
@@ -385,6 +415,7 @@ namespace VoiDPlugins.Filter
 
         private readonly object _stateLock = new();
         private readonly ManualResetEventSlim _ready = new(false);
+        private readonly uint _borderColor;
         private readonly OverlayNativeMethods.WindowProcedure _windowProcedure;
         private readonly Thread _thread;
         private readonly IntPtr[] _windows = new IntPtr[4];

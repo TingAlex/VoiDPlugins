@@ -1,5 +1,6 @@
 using System;
 using System.Numerics;
+using OpenTabletDriver.Plugin;
 using OpenTabletDriver.Plugin.Tablet;
 using VoiDPlugins.Filter;
 using Xunit;
@@ -69,6 +70,17 @@ namespace PrecisionControl.Tests
         }
 
         [Fact]
+        public void DisabledGlobalHotkeyDoesNotToggleItsFilter()
+        {
+            using var filter = CreateFilter(out _, out var overlay);
+            filter.EnableGlobalHotkey = false;
+            filter.Consume(new TestTabletReport(new Vector2(100, 100)));
+
+            Assert.False(PrecisionControlCoordinator.TryQueueGlobalToggle());
+            Assert.Equal(0, overlay.ShowCount);
+        }
+
+        [Fact]
         public void BorderIsHiddenWhenPrecisionIsToggledOff()
         {
             using var filter = CreateFilter(out _, out var overlay);
@@ -103,7 +115,44 @@ namespace PrecisionControl.Tests
 
             Assert.True(filter.ShowBorder);
             Assert.Equal(2.0f, filter.BorderThickness);
-            Assert.Equal(0.55f, filter.BorderOpacity);
+            Assert.Equal("#000000", filter.BorderColor);
+            Assert.Equal(0.4f, filter.BorderOpacity);
+            Assert.True(filter.EnableGlobalHotkey);
+            Assert.Equal("P", filter.GlobalHotkeyKey);
+            Assert.True(filter.HotkeyCtrl);
+            Assert.True(filter.HotkeyAlt);
+            Assert.True(filter.HotkeyShift);
+            Assert.False(filter.HotkeyWindows);
+        }
+
+        [Theory]
+        [InlineData("#000000", 0x00000000)]
+        [InlineData("#D6F2FF", 0x00FFF2D6)]
+        [InlineData("123456", 0x00563412)]
+        public void BorderColorsConvertToWin32ColorReferences(
+            string value,
+            uint expected)
+        {
+            Assert.True(BorderColorParser.TryParse(value, out var actual));
+            Assert.Equal(expected, actual);
+        }
+
+        [Theory]
+        [InlineData("")]
+        [InlineData("#123")]
+        [InlineData("#GG0000")]
+        public void InvalidBorderColorsFallBackToBlack(string value)
+        {
+            Assert.False(BorderColorParser.TryParse(value, out var actual));
+            Assert.Equal(0u, actual);
+        }
+
+        [Fact]
+        public void GlobalHotkeyIsConfiguredOnTheFilterInsteadOfASeparateTool()
+        {
+            Assert.DoesNotContain(
+                typeof(VoiDPlugins.Filter.PrecisionControl).Assembly.GetTypes(),
+                type => type.IsClass && typeof(ITool).IsAssignableFrom(type));
         }
 
         [Fact]
@@ -191,11 +240,13 @@ namespace PrecisionControl.Tests
                 Scale = 0.25f,
                 ShowBorder = true,
                 BorderThickness = 2,
-                BorderOpacity = 0.55f,
+                BorderColor = "#000000",
+                BorderOpacity = 0.4f,
+                EnableGlobalHotkey = true,
                 Tablet = tablet
             };
             filter.Overlay = overlay;
-            filter.Initialize();
+            PrecisionControlCoordinator.Register(filter);
             return filter;
         }
 

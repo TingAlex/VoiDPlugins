@@ -16,23 +16,23 @@ VoiDPlugins is a collection of extensions for [OpenTabletDriver](https://github.
 
 ## Filters
 
-### [PrecisionControl](https://github.com/X9VoiD/VoiDPlugins/wiki/PrecisionControl)
+### [Precision Control (TingAlex Enhanced)](https://github.com/X9VoiD/VoiDPlugins/wiki/PrecisionControl)
 
       Dynamic sensitivity switching
 
-#### Windows global hotkey
+#### Unified precision settings
 
-The PrecisionControl assembly also provides a `Precision Control Global Hotkey`
-tool on Windows. It uses `RegisterHotKey`, not a low-level keyboard hook, and
-only toggles precision while a pen is in range on a tablet that has the
-Precision Control filter enabled. The toggle is applied immediately at the
-latest hover position, so it does not wait for the pen to touch the tablet
-again.
+The enhanced filter keeps its precision multiplier, border, and Windows global
+hotkey settings together under `Filters > Precision Control (TingAlex
+Enhanced)`. The hotkey uses `RegisterHotKey`, not a low-level keyboard hook,
+and only toggles precision while a pen is in range. The toggle is applied
+immediately at the latest hover position, so it does not wait for the pen to
+touch the tablet again.
 
-1. Enable the `Precision Control` filter and choose a precision multiplier.
-2. Enable the `Precision Control Global Hotkey` tool.
-3. Configure its key and modifiers. The default is `Ctrl+Alt+Shift+P`.
-4. In Windows, open **Settings > Bluetooth & devices > Touchpad > Advanced
+1. Enable the enhanced Precision Control filter.
+2. Configure the multiplier, border, and hotkey in the same filter card. The
+   default shortcut is `Ctrl+Alt+Shift+P`.
+3. In Windows, open **Settings > Bluetooth & devices > Touchpad > Advanced
    gestures** and record the same custom shortcut for **Three-finger tap**.
 
 The global hotkey is a toggle. A hotkey received while the pen is out of range
@@ -40,10 +40,10 @@ is ignored. If multiple tablets have an in-range pen, the most recently active
 tablet is selected.
 
 When precision mode is active on Windows, the filter displays a thin,
-semi-transparent ice-blue border around the effective precision area. The
-border is always on top, does not take focus, and lets mouse and pen input pass
-through. Its visibility, thickness, and opacity can be configured on the
-Precision Control filter.
+semi-transparent border around the effective precision area. The border is
+always on top, does not take focus, and lets mouse and pen input pass through.
+Its visibility, `#RRGGBB` color, thickness, and opacity can be configured on
+the enhanced filter. The default is black at 40% opacity.
 
 See Microsoft's
 [touch gesture documentation](https://support.microsoft.com/windows/touch-gestures-for-windows-a9d28305-4818-a5df-4e2b-e5590f850741)
