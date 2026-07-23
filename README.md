@@ -25,9 +25,9 @@ VoiDPlugins is a collection of extensions for [OpenTabletDriver](https://github.
 The enhanced filter keeps its precision multiplier, border, and Windows global
 hotkey settings together under `Filters > Precision Control (TingAlex
 Enhanced)`. The hotkey uses `RegisterHotKey`, not a low-level keyboard hook,
-and only toggles precision while a pen is in range. The toggle is applied
-immediately at the latest hover position, so it does not wait for the pen to
-touch the tablet again.
+and can toggle precision even when the pen is out of range. The activation
+anchor can come from the last pen position, the current mouse position, or
+whichever pointer moved most recently.
 
 1. Enable the enhanced Precision Control filter.
 2. Configure the multiplier, border, and hotkey in the same filter card. The
@@ -35,9 +35,13 @@ touch the tablet again.
 3. In Windows, open **Settings > Bluetooth & devices > Touchpad > Advanced
    gestures** and record the same custom shortcut for **Three-finger tap**.
 
-The global hotkey is a toggle. A hotkey received while the pen is out of range
-is ignored. If multiple tablets have an in-range pen, the most recently active
-tablet is selected.
+The toggle works whether the pen is touching, hovering, or out of range.
+Precision Control also registers `Ctrl+Alt+Shift` plus the four arrow keys for
+moving an active precision area. Map those shortcuts to three-finger swipes in
+Windows. Directional moves are ignored only while pen pressure is above zero;
+hovering and out-of-range pens do not restrict them. Horizontal and vertical
+move distances default to 20% of the precision-area width and height and can be
+configured independently.
 
 #### Precision area positioning
 
@@ -46,13 +50,25 @@ tablet is selected.
 - `Screen Relative (Legacy)` preserves the original behavior. It scales the
   full monitor area around the activation point, so the pointer keeps the same
   relative position it had on the monitor.
-- `Pointer Relative` creates a fixed-size precision area directly from the
-  current Windows pointer position. `Pointer Position X (%)` and `Pointer
-  Position Y (%)` choose where the pointer sits inside that area. The defaults
-  are 10% from the left and 10% from the top; 50%/50% centers the area on the
-  pointer. Pointer movement is clamped to the displayed precision area. Near a
-  display edge, the area shifts inward so the full border remains visible on
-  the current display.
+- `Pointer Anchored` creates a fixed-size precision area around a configurable
+  activation anchor. `Anchor Position X (%)` and `Anchor Position Y (%)`
+  choose where that anchor sits inside the area. The defaults are 10% from the
+  left and 10% from the top; 50%/50% centers the area on the anchor.
+
+`Activation Anchor Source` selects that anchor:
+
+- `Last Active Pointer` (default) uses whichever moved most recently: the
+  OpenTabletDriver pen cursor or the physical mouse/touchpad cursor.
+- `Last Pen Position` keeps using the last pen cursor, with a mouse fallback
+  before the first pen report.
+- `Current Mouse Position` always uses the Windows mouse cursor, with a pen
+  fallback if the mouse position is unavailable.
+
+The area keeps the exact configured relationship to its anchor. It is not
+shifted back inside a display near an edge, and directional moves may also
+place part of the area off-screen. Moving the area does not synthesize pointer
+movement. The current pen cursor stays still, then resumes from the translated
+area when the pen reports movement again.
 
 When precision mode is active on Windows, the filter displays a thin,
 semi-transparent border around the effective precision area. The border is

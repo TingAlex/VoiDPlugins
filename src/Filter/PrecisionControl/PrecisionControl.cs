@@ -41,11 +41,23 @@ namespace VoiDPlugins.Filter
     public class PrecisionControl : IPositionedPipelineElement<IDeviceReport>, IDisposable
     {
         public const string ScreenRelativeMode = "Screen Relative (Legacy)";
-        public const string PointerRelativeMode = "Pointer Relative";
+        public const string PointerAnchoredMode = "Pointer Anchored";
+        internal const string PreviousPenCursorRelativeMode = "Pen Cursor Relative";
+        internal const string PreviousPointerRelativeMode = "Pointer Relative";
+        public const string LastActivePointerAnchor = "Last Active Pointer";
+        public const string LastPenPositionAnchor = "Last Pen Position";
+        public const string CurrentMousePositionAnchor = "Current Mouse Position";
 
         public static string[] ValidGlobalHotkeyKeys => GlobalHotkeyKeyMap.Keys.ToArray();
         public static string[] ValidPositioningModes =>
-            new[] { ScreenRelativeMode, PointerRelativeMode };
+            new[] { ScreenRelativeMode, PointerAnchoredMode };
+        public static string[] ValidActivationAnchorSources =>
+            new[]
+            {
+                LastActivePointerAnchor,
+                LastPenPositionAnchor,
+                CurrentMousePositionAnchor
+            };
 
         public event Action<IDeviceReport>? Emit;
 
@@ -56,10 +68,14 @@ namespace VoiDPlugins.Filter
         [DefaultPropertyValue(ScreenRelativeMode)]
         public string? PositioningMode { get; set; } = ScreenRelativeMode;
 
-        [SliderProperty("Pointer Position X (%)", 0f, 100f, 1f), DefaultPropertyValue(10f)]
+        [Property("Activation Anchor Source"), PropertyValidated(nameof(ValidActivationAnchorSources))]
+        [DefaultPropertyValue(LastActivePointerAnchor)]
+        public string? ActivationAnchorSource { get; set; } = LastActivePointerAnchor;
+
+        [SliderProperty("Anchor Position X (%)", 0f, 100f, 1f), DefaultPropertyValue(10f)]
         public float PointerPositionXPercent { get; set; } = 10f;
 
-        [SliderProperty("Pointer Position Y (%)", 0f, 100f, 1f), DefaultPropertyValue(10f)]
+        [SliderProperty("Anchor Position Y (%)", 0f, 100f, 1f), DefaultPropertyValue(10f)]
         public float PointerPositionYPercent { get; set; } = 10f;
 
         [BooleanProperty("Show Precision Border", "Show a translucent, click-through border around the precision area.")]
@@ -75,7 +91,7 @@ namespace VoiDPlugins.Filter
         [SliderProperty("Border Opacity", 0.05f, 1.0f, 0.05f), DefaultPropertyValue(0.4f)]
         public float BorderOpacity { get; set; } = 0.4f;
 
-        [BooleanProperty("Enable Global Hotkey", "Let a Windows shortcut toggle precision while the pen is in range.")]
+        [BooleanProperty("Enable Global Hotkey", "Let a Windows shortcut toggle precision at any time.")]
         [DefaultPropertyValue(true)]
         public bool EnableGlobalHotkey { get; set; } = true;
 
@@ -95,21 +111,41 @@ namespace VoiDPlugins.Filter
         [BooleanProperty("Hotkey Windows", "Require the Windows key."), DefaultPropertyValue(false)]
         public bool HotkeyWindows { get; set; }
 
+        [BooleanProperty("Enable Nudge Hotkeys", "Move the active precision area with global shortcuts while the pen is not writing.")]
+        [DefaultPropertyValue(true)]
+        public bool EnableNudgeHotkeys { get; set; } = true;
+
+        [Property("Nudge Up Key"), PropertyValidated(nameof(ValidGlobalHotkeyKeys))]
+        [DefaultPropertyValue("Up")]
+        public string? NudgeUpKey { get; set; } = "Up";
+
+        [Property("Nudge Down Key"), PropertyValidated(nameof(ValidGlobalHotkeyKeys))]
+        [DefaultPropertyValue("Down")]
+        public string? NudgeDownKey { get; set; } = "Down";
+
+        [Property("Nudge Left Key"), PropertyValidated(nameof(ValidGlobalHotkeyKeys))]
+        [DefaultPropertyValue("Left")]
+        public string? NudgeLeftKey { get; set; } = "Left";
+
+        [Property("Nudge Right Key"), PropertyValidated(nameof(ValidGlobalHotkeyKeys))]
+        [DefaultPropertyValue("Right")]
+        public string? NudgeRightKey { get; set; } = "Right";
+
+        [SliderProperty("Horizontal Nudge (%)", 1f, 100f, 1f), DefaultPropertyValue(20f)]
+        public float HorizontalNudgePercent { get; set; } = 20f;
+
+        [SliderProperty("Vertical Nudge (%)", 1f, 100f, 1f), DefaultPropertyValue(20f)]
+        public float VerticalNudgePercent { get; set; } = 20f;
+
         [TabletReference]
         public TabletReference? Tablet { get; set; }
 
         public PipelinePosition Position => PipelinePosition.PostTransform;
 
-        internal bool PenInRange
-        {
-            get
-            {
-                lock (_stateLock)
-                    return _penInRange;
-            }
-        }
-
-        internal long LastInRangeTimestamp => Interlocked.Read(ref _lastInRangeTimestamp);
+        internal long LastPointerActivityTimestamp =>
+            Math.Max(
+                Interlocked.Read(ref _lastPenMovementTimestamp),
+                PointerActivityTracker.LastMouseMovementTimestamp);
 
         [OnDependencyLoad]
         public void Initialize()
@@ -124,32 +160,44 @@ namespace VoiDPlugins.Filter
             if (value is OutOfRangeReport)
             {
                 lock (_stateLock)
-                    _penInRange = false;
+                    _isWriting = false;
             }
 
             if (value is ITabletReport report)
             {
                 lock (_stateLock)
                 {
-                    _penInRange = true;
-                    _lastInRangePosition = report.Position;
-                    Interlocked.Exchange(ref _lastInRangeTimestamp, Stopwatch.GetTimestamp());
+                    var rawPosition = report.Position;
+                    _isWriting = report.Pressure > 0;
+                    _lastRawPenPosition = rawPosition;
+                    _hasLastRawPenPosition = true;
+
+                    if (!_isActive)
+                        RecordPenCursorPosition(rawPosition);
+
+                    if (_isActive && _awaitingPenBaseline)
+                    {
+                        _startingPoint = rawPosition;
+                        _awaitingPenBaseline = false;
+                    }
 
                     while (_pendingActions.TryDequeue(out var action))
-                        ApplyAction(action, report.Position);
+                        ApplyAction(action, rawPosition);
 
                     if (_isActive)
                     {
                         report.Position = _pointerRelativeActive
                             ? PrecisionPositionCalculator.MapPointerRelative(
-                                report.Position,
+                                rawPosition,
                                 _startingPoint,
                                 _activationAnchor,
                                 Scale,
                                 _precisionBounds)
-                            : _startingPoint +
-                                ((report.Position - _startingPoint) * Scale);
+                            : _activationAnchor +
+                                ((rawPosition - _startingPoint) * Scale);
                     }
+
+                    RecordPenCursorPosition(report.Position);
                 }
                 value = report;
             }
@@ -162,16 +210,27 @@ namespace VoiDPlugins.Filter
             _pendingActions.Enqueue(action);
         }
 
-        internal bool QueueGlobalToggle()
+        internal bool QueueGlobalAction(PrecisionControlAction action)
         {
             lock (_stateLock)
             {
-                if (!_penInRange)
+                if (IsNudgeAction(action) &&
+                    (!_isActive || _isWriting))
+                {
                     return false;
+                }
 
-                ApplyAction(PrecisionControlAction.Toggle, _lastInRangePosition);
+                var currentPosition = _hasLastRawPenPosition
+                    ? _lastRawPenPosition
+                    : Vector2.Zero;
+                ApplyAction(action, currentPosition);
                 return true;
             }
+        }
+
+        internal bool QueueGlobalToggle()
+        {
+            return QueueGlobalAction(PrecisionControlAction.Toggle);
         }
 
         private void ApplyAction(PrecisionControlAction action, Vector2 currentPosition)
@@ -195,25 +254,38 @@ namespace VoiDPlugins.Filter
                     _isActive = false;
                     _overlay?.Hide();
                     break;
+                case PrecisionControlAction.NudgeUp:
+                case PrecisionControlAction.NudgeDown:
+                case PrecisionControlAction.NudgeLeft:
+                case PrecisionControlAction.NudgeRight:
+                    Nudge(action);
+                    break;
             }
         }
 
         private void ActivateAt(Vector2 currentPosition)
         {
-            _startingPoint = currentPosition;
+            _activationAnchor = ResolveActivationAnchor(currentPosition);
+            _startingPoint = _hasLastRawPenPosition
+                ? _lastRawPenPosition
+                : currentPosition;
+            _awaitingPenBaseline = !_hasLastRawPenPosition;
             _pointerRelativeActive =
+                (string.Equals(
+                    PositioningMode,
+                    PointerAnchoredMode,
+                    StringComparison.Ordinal) ||
                 string.Equals(
                     PositioningMode,
-                    PointerRelativeMode,
-                    StringComparison.Ordinal) &&
+                    PreviousPenCursorRelativeMode,
+                    StringComparison.Ordinal) ||
+                string.Equals(
+                    PositioningMode,
+                    PreviousPointerRelativeMode,
+                    StringComparison.Ordinal)) &&
                 (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ||
-                    PointerPositionProvider != null ||
                     OutputAreaProvider != null);
 
-            _activationAnchor = _pointerRelativeActive
-                ? PointerPositionProvider?.Invoke(currentPosition) ??
-                    PrecisionControlDesktop.GetPointerPosition(currentPosition)
-                : currentPosition;
             var outputArea = OutputAreaProvider?.Invoke(_activationAnchor) ??
                 PrecisionControlDesktop.GetOutputArea(_activationAnchor);
             _precisionBounds = _pointerRelativeActive
@@ -225,10 +297,109 @@ namespace VoiDPlugins.Filter
                     PointerPositionYPercent)
                 : PrecisionBoundsCalculator.CalculateScreenRelative(
                     outputArea,
-                    currentPosition,
+                    _activationAnchor,
                     Scale);
 
             ShowPrecisionBorder();
+        }
+
+        private Vector2 ResolveActivationAnchor(Vector2 fallback)
+        {
+            var mouse = MouseActivityProvider?.Invoke() ??
+                PointerActivityTracker.GetMouseActivity();
+            var hasPen = _hasLastPenCursorPosition;
+
+            if (string.Equals(
+                ActivationAnchorSource,
+                LastPenPositionAnchor,
+                StringComparison.Ordinal))
+            {
+                if (hasPen)
+                    return _lastPenCursorPosition;
+                if (mouse.Available)
+                    return mouse.Position;
+                return fallback;
+            }
+
+            if (string.Equals(
+                ActivationAnchorSource,
+                CurrentMousePositionAnchor,
+                StringComparison.Ordinal))
+            {
+                if (mouse.Available)
+                    return mouse.Position;
+                if (hasPen)
+                    return _lastPenCursorPosition;
+                return fallback;
+            }
+
+            if (hasPen &&
+                (!mouse.Available ||
+                    Interlocked.Read(ref _lastPenMovementTimestamp) >=
+                    mouse.Timestamp))
+            {
+                return _lastPenCursorPosition;
+            }
+
+            return mouse.Available ? mouse.Position :
+                hasPen ? _lastPenCursorPosition :
+                fallback;
+        }
+
+        private void Nudge(PrecisionControlAction action)
+        {
+            var horizontalDistance = (int)Math.Round(
+                _precisionBounds.Width *
+                (Math.Clamp(HorizontalNudgePercent, 0f, 100f) / 100f));
+            var verticalDistance = (int)Math.Round(
+                _precisionBounds.Height *
+                (Math.Clamp(VerticalNudgePercent, 0f, 100f) / 100f));
+            var deltaX = action switch
+            {
+                PrecisionControlAction.NudgeLeft => -horizontalDistance,
+                PrecisionControlAction.NudgeRight => horizontalDistance,
+                _ => 0
+            };
+            var deltaY = action switch
+            {
+                PrecisionControlAction.NudgeUp => -verticalDistance,
+                PrecisionControlAction.NudgeDown => verticalDistance,
+                _ => 0
+            };
+
+            _precisionBounds = _precisionBounds.Translate(deltaX, deltaY);
+
+            if (_hasLastRawPenPosition && _hasLastPenCursorPosition)
+            {
+                _startingPoint = _lastRawPenPosition;
+                _activationAnchor = _lastPenCursorPosition;
+            }
+
+            ShowPrecisionBorder();
+        }
+
+        private void RecordPenCursorPosition(Vector2 position)
+        {
+            if (!_hasLastPenCursorPosition ||
+                Vector2.DistanceSquared(_lastPenCursorPosition, position) > 0.01f)
+            {
+                Interlocked.Exchange(
+                    ref _lastPenMovementTimestamp,
+                    Stopwatch.GetTimestamp());
+            }
+
+            _lastPenCursorPosition = position;
+            _hasLastPenCursorPosition = true;
+            PointerActivityTracker.RecordPenPosition(position);
+        }
+
+        private static bool IsNudgeAction(PrecisionControlAction action)
+        {
+            return action is
+                PrecisionControlAction.NudgeUp or
+                PrecisionControlAction.NudgeDown or
+                PrecisionControlAction.NudgeLeft or
+                PrecisionControlAction.NudgeRight;
         }
 
         private void ShowPrecisionBorder()
@@ -269,16 +440,20 @@ namespace VoiDPlugins.Filter
         private OverlayBounds _precisionBounds;
         private bool _isActive;
         private bool _pointerRelativeActive;
-        private bool _penInRange;
-        private Vector2 _lastInRangePosition;
-        private long _lastInRangeTimestamp;
+        private bool _isWriting;
+        private bool _awaitingPenBaseline;
+        private bool _hasLastRawPenPosition;
+        private bool _hasLastPenCursorPosition;
+        private Vector2 _lastRawPenPosition;
+        private Vector2 _lastPenCursorPosition;
+        private long _lastPenMovementTimestamp;
         private readonly object _stateLock = new();
         internal IPrecisionControlOverlay? Overlay
         {
             set => _overlay = value;
         }
-        internal Func<Vector2, Vector2>? PointerPositionProvider { get; set; }
         internal Func<Vector2, OverlayBounds>? OutputAreaProvider { get; set; }
+        internal Func<PointerActivitySample>? MouseActivityProvider { get; set; }
         private IPrecisionControlOverlay? _overlay;
     }
 
@@ -303,7 +478,11 @@ namespace VoiDPlugins.Filter
     {
         Toggle,
         Activate,
-        Deactivate
+        Deactivate,
+        NudgeUp,
+        NudgeDown,
+        NudgeLeft,
+        NudgeRight
     }
 
     internal static class PrecisionControlCoordinator
@@ -335,21 +514,56 @@ namespace VoiDPlugins.Filter
 
         public static bool TryQueueGlobalToggle(HotkeyGesture? gesture = null)
         {
+            return TryQueueGlobalAction(
+                PrecisionControlAction.Toggle,
+                gesture);
+        }
+
+        public static bool TryQueueGlobalAction(
+            PrecisionControlAction requestedAction,
+            HotkeyGesture? gesture = null)
+        {
             lock (_syncRoot)
             {
-                var filter = _filters
-                    .Where(candidate =>
-                        candidate.EnableGlobalHotkey &&
-                        candidate.PenInRange &&
-                        (!gesture.HasValue ||
-                            PrecisionControlGlobalHotkeyManager.Matches(
+                var candidates = _filters
+                    .Select(candidate =>
+                    {
+                        var action = requestedAction;
+                        var matches = gesture.HasValue
+                            ? PrecisionControlGlobalHotkeyManager.TryMatch(
                                 candidate,
-                                gesture.Value)))
-                    .OrderByDescending(candidate => candidate.LastInRangeTimestamp)
-                    .FirstOrDefault();
+                                gesture.Value,
+                                out action)
+                            : IsActionEnabled(candidate, action);
+                        return new { Filter = candidate, Action = action, Matches = matches };
+                    })
+                    .Where(candidate => candidate.Matches)
+                    .OrderByDescending(candidate =>
+                        candidate.Filter.LastPointerActivityTimestamp);
 
-                return filter?.QueueGlobalToggle() ?? false;
+                foreach (var candidate in candidates)
+                {
+                    if (candidate.Filter.QueueGlobalAction(candidate.Action))
+                        return true;
+                }
+
+                return false;
             }
+        }
+
+        private static bool IsActionEnabled(
+            PrecisionControl filter,
+            PrecisionControlAction action)
+        {
+            return action == PrecisionControlAction.Toggle
+                ? filter.EnableGlobalHotkey
+                : action is
+                    PrecisionControlAction.NudgeUp or
+                    PrecisionControlAction.NudgeDown or
+                    PrecisionControlAction.NudgeLeft or
+                    PrecisionControlAction.NudgeRight
+                    ? filter.EnableNudgeHotkeys
+                    : true;
         }
 
         private static readonly object _syncRoot = new();

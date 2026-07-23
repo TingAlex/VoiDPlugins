@@ -80,6 +80,15 @@ namespace VoiDPlugins.Filter
         public int Height { get; }
         public int Right => Left + Width;
         public int Bottom => Top + Height;
+
+        public OverlayBounds Translate(int deltaX, int deltaY)
+        {
+            return new OverlayBounds(
+                Left + deltaX,
+                Top + deltaY,
+                Width,
+                Height);
+        }
     }
 
     internal static class PrecisionBoundsCalculator
@@ -115,14 +124,12 @@ namespace VoiDPlugins.Filter
             float verticalPercent)
         {
             var safeScale = Math.Max(0, scale);
-            var width = Math.Clamp(
-                (int)Math.Ceiling(outputArea.Width * safeScale),
+            var width = Math.Max(
                 1,
-                Math.Max(1, outputArea.Width));
-            var height = Math.Clamp(
-                (int)Math.Ceiling(outputArea.Height * safeScale),
+                (int)Math.Ceiling(outputArea.Width * safeScale));
+            var height = Math.Max(
                 1,
-                Math.Max(1, outputArea.Height));
+                (int)Math.Ceiling(outputArea.Height * safeScale));
             var horizontalRatio = Math.Clamp(horizontalPercent, 0, 100) / 100f;
             var verticalRatio = Math.Clamp(verticalPercent, 0, 100) / 100f;
             var requestedLeft =
@@ -131,14 +138,8 @@ namespace VoiDPlugins.Filter
                 (int)Math.Round(pointer.Y - (height * verticalRatio));
 
             return new OverlayBounds(
-                Math.Clamp(
-                    requestedLeft,
-                    outputArea.Left,
-                    outputArea.Right - width),
-                Math.Clamp(
-                    requestedTop,
-                    outputArea.Top,
-                    outputArea.Bottom - height),
+                requestedLeft,
+                requestedTop,
                 width,
                 height);
         }
@@ -146,15 +147,17 @@ namespace VoiDPlugins.Filter
 
     internal static class PrecisionControlDesktop
     {
-        public static Vector2 GetPointerPosition(Vector2 fallback)
+        public static bool TryGetMousePosition(out Vector2 position)
         {
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
                 OverlayNativeMethods.GetCursorPos(out var point))
             {
-                return new Vector2(point.X, point.Y);
+                position = new Vector2(point.X, point.Y);
+                return true;
             }
 
-            return fallback;
+            position = Vector2.Zero;
+            return false;
         }
 
         public static OverlayBounds GetOutputArea(Vector2 anchor)

@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
+using System.Numerics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using OpenTabletDriver.Plugin;
@@ -13,7 +15,15 @@ namespace VoiDPlugins.Filter
             Enumerable.Range('A', 26).Select(value => ((char)value).ToString())
                 .Concat(Enumerable.Range('0', 10).Select(value => ((char)value).ToString()))
                 .Concat(Enumerable.Range(1, 24).Select(value => $"F{value}"))
-                .Concat(new[] { "Pause", "ScrollLock" })
+                .Concat(new[]
+                {
+                    "Up",
+                    "Down",
+                    "Left",
+                    "Right",
+                    "Pause",
+                    "ScrollLock"
+                })
                 .ToArray();
 
         public static bool TryGetVirtualKey(string key, out uint virtualKey)
@@ -48,6 +58,17 @@ namespace VoiDPlugins.Filter
                 return true;
             }
 
+            var navigationKeys = new Dictionary<string, uint>(
+                StringComparer.OrdinalIgnoreCase)
+            {
+                ["Left"] = 0x25,
+                ["Up"] = 0x26,
+                ["Right"] = 0x27,
+                ["Down"] = 0x28
+            };
+            if (navigationKeys.TryGetValue(key, out virtualKey))
+                return true;
+
             virtualKey = 0;
             return false;
         }
@@ -62,6 +83,7 @@ namespace VoiDPlugins.Filter
                 if (!_filters.Contains(filter))
                     _filters.Add(filter);
 
+                PointerActivityTracker.SetEnabled(_filters.Count > 0);
                 RebuildListeners();
             }
         }
@@ -71,19 +93,27 @@ namespace VoiDPlugins.Filter
             lock (_syncRoot)
             {
                 _filters.Remove(filter);
+                PointerActivityTracker.SetEnabled(_filters.Count > 0);
                 RebuildListeners();
             }
         }
 
-        public static bool Matches(
+        public static bool TryMatch(
             PrecisionControl filter,
-            HotkeyGesture gesture)
+            HotkeyGesture gesture,
+            out PrecisionControlAction action)
         {
-            return TryCreateConfiguration(
-                filter,
-                out var candidate,
-                out _) &&
-                candidate.Equals(gesture);
+            foreach (var binding in CreateConfigurations(filter, false))
+            {
+                if (binding.Gesture.Equals(gesture))
+                {
+                    action = binding.Action;
+                    return true;
+                }
+            }
+
+            action = default;
+            return false;
         }
 
         private static void RebuildListeners()
@@ -94,55 +124,122 @@ namespace VoiDPlugins.Filter
 
             foreach (var filter in _filters)
             {
-                if (!filter.EnableGlobalHotkey)
-                    continue;
-
-                if (!TryCreateConfiguration(
-                    filter,
-                    out var gesture,
-                    out var errorMessage))
+                foreach (var binding in CreateConfigurations(filter, true))
                 {
+                    var gesture = binding.Gesture;
+                    if (_listeners.ContainsKey(gesture))
+                        continue;
+
+                    var listener = new GlobalHotkeyListener(
+                        gesture.Modifiers,
+                        gesture.VirtualKey,
+                        () => OnHotkeyPressed(gesture));
+                    if (!listener.Start(out var error))
+                    {
+                        Log.Write(nameof(PrecisionControl),
+                            $"Unable to register global hotkey {gesture.DisplayText}. Win32 error: {error}.",
+                            LogLevel.Error);
+                        listener.Dispose();
+                        continue;
+                    }
+
+                    _listeners.Add(gesture, listener);
                     Log.Write(nameof(PrecisionControl),
-                        errorMessage,
-                        LogLevel.Error);
-                    continue;
+                        $"Registered {FormatAction(binding.Action)} hotkey {gesture.DisplayText}.");
                 }
-
-                if (_listeners.ContainsKey(gesture))
-                    continue;
-
-                var listener = new GlobalHotkeyListener(
-                    gesture.Modifiers,
-                    gesture.VirtualKey,
-                    () => OnHotkeyPressed(gesture));
-                if (!listener.Start(out var error))
-                {
-                    Log.Write(nameof(PrecisionControl),
-                        $"Unable to register global hotkey {gesture.DisplayText}. Win32 error: {error}.",
-                        LogLevel.Error);
-                    listener.Dispose();
-                    continue;
-                }
-
-                _listeners.Add(gesture, listener);
-                Log.Write(nameof(PrecisionControl),
-                    $"Registered global hotkey {gesture.DisplayText}. The hotkey toggles precision only while a pen is in range.");
             }
         }
 
-        private static bool TryCreateConfiguration(
+        private static IEnumerable<HotkeyBinding> CreateConfigurations(
             PrecisionControl filter,
+            bool logErrors)
+        {
+            var configurations = new[]
+            {
+                new
+                {
+                    Enabled = filter.EnableGlobalHotkey,
+                    Key = filter.GlobalHotkeyKey,
+                    Action = PrecisionControlAction.Toggle
+                },
+                new
+                {
+                    Enabled = filter.EnableNudgeHotkeys,
+                    Key = filter.NudgeUpKey,
+                    Action = PrecisionControlAction.NudgeUp
+                },
+                new
+                {
+                    Enabled = filter.EnableNudgeHotkeys,
+                    Key = filter.NudgeDownKey,
+                    Action = PrecisionControlAction.NudgeDown
+                },
+                new
+                {
+                    Enabled = filter.EnableNudgeHotkeys,
+                    Key = filter.NudgeLeftKey,
+                    Action = PrecisionControlAction.NudgeLeft
+                },
+                new
+                {
+                    Enabled = filter.EnableNudgeHotkeys,
+                    Key = filter.NudgeRightKey,
+                    Action = PrecisionControlAction.NudgeRight
+                }
+            };
+
+            var seen = new HashSet<HotkeyGesture>();
+            foreach (var configuration in configurations)
+            {
+                if (!configuration.Enabled)
+                    continue;
+
+                if (!TryCreateGesture(
+                    filter,
+                    configuration.Key,
+                    out var gesture,
+                    out var errorMessage))
+                {
+                    if (logErrors)
+                    {
+                        Log.Write(
+                            nameof(PrecisionControl),
+                            errorMessage,
+                            LogLevel.Error);
+                    }
+                    continue;
+                }
+
+                if (!seen.Add(gesture))
+                {
+                    if (logErrors)
+                    {
+                        Log.Write(
+                            nameof(PrecisionControl),
+                            $"Duplicate global hotkey {gesture.DisplayText}; keeping the first configured action.",
+                            LogLevel.Warning);
+                    }
+                    continue;
+                }
+
+                yield return new HotkeyBinding(gesture, configuration.Action);
+            }
+        }
+
+        private static bool TryCreateGesture(
+            PrecisionControl filter,
+            string? key,
             out HotkeyGesture gesture,
             out string errorMessage)
         {
             gesture = default;
-            if (string.IsNullOrWhiteSpace(filter.GlobalHotkeyKey) ||
+            if (string.IsNullOrWhiteSpace(key) ||
                 !GlobalHotkeyKeyMap.TryGetVirtualKey(
-                    filter.GlobalHotkeyKey,
+                    key,
                     out var virtualKey))
             {
                 errorMessage =
-                    $"Unsupported global hotkey key '{filter.GlobalHotkeyKey}'.";
+                    $"Unsupported global hotkey key '{key}'.";
                 return false;
             }
 
@@ -166,21 +263,25 @@ namespace VoiDPlugins.Filter
             gesture = new HotkeyGesture(
                 modifiers,
                 virtualKey,
-                FormatHotkey(filter));
+                FormatHotkey(filter, key));
             errorMessage = string.Empty;
             return true;
         }
 
         private static void OnHotkeyPressed(HotkeyGesture gesture)
         {
-            if (!PrecisionControlCoordinator.TryQueueGlobalToggle(gesture))
+            if (!PrecisionControlCoordinator.TryQueueGlobalAction(
+                PrecisionControlAction.Toggle,
+                gesture))
             {
                 Log.Debug(nameof(PrecisionControl),
-                    "Ignored global hotkey because no Precision Control pen is in range.");
+                    "Ignored global hotkey because its action is unavailable or the pen is writing.");
             }
         }
 
-        private static string FormatHotkey(PrecisionControl filter)
+        private static string FormatHotkey(
+            PrecisionControl filter,
+            string key)
         {
             var parts = new List<string>();
             if (filter.HotkeyCtrl)
@@ -191,14 +292,156 @@ namespace VoiDPlugins.Filter
                 parts.Add("Shift");
             if (filter.HotkeyWindows)
                 parts.Add("Win");
-            parts.Add(filter.GlobalHotkeyKey ?? string.Empty);
+            parts.Add(key);
             return string.Join("+", parts);
+        }
+
+        private static string FormatAction(PrecisionControlAction action)
+        {
+            return action switch
+            {
+                PrecisionControlAction.Toggle => "toggle",
+                PrecisionControlAction.NudgeUp => "nudge-up",
+                PrecisionControlAction.NudgeDown => "nudge-down",
+                PrecisionControlAction.NudgeLeft => "nudge-left",
+                PrecisionControlAction.NudgeRight => "nudge-right",
+                _ => action.ToString()
+            };
         }
 
         private static readonly object _syncRoot = new();
         private static readonly List<PrecisionControl> _filters = new();
         private static readonly Dictionary<HotkeyGesture, GlobalHotkeyListener>
             _listeners = new();
+    }
+
+    internal readonly struct HotkeyBinding
+    {
+        public HotkeyBinding(
+            HotkeyGesture gesture,
+            PrecisionControlAction action)
+        {
+            Gesture = gesture;
+            Action = action;
+        }
+
+        public HotkeyGesture Gesture { get; }
+        public PrecisionControlAction Action { get; }
+    }
+
+    internal readonly struct PointerActivitySample
+    {
+        public PointerActivitySample(
+            Vector2 position,
+            long timestamp,
+            bool available = true)
+        {
+            Position = position;
+            Timestamp = timestamp;
+            Available = available;
+        }
+
+        public Vector2 Position { get; }
+        public long Timestamp { get; }
+        public bool Available { get; }
+    }
+
+    internal static class PointerActivityTracker
+    {
+        public static long LastMouseMovementTimestamp
+        {
+            get
+            {
+                lock (_syncRoot)
+                    return _mouseTimestamp;
+            }
+        }
+
+        public static void SetEnabled(bool enabled)
+        {
+            lock (_syncRoot)
+            {
+                if (enabled)
+                {
+                    if (_timer != null)
+                        return;
+
+                    SampleMouseLocked();
+                    _timer = new Timer(
+                        _ => SampleMouse(),
+                        null,
+                        TimeSpan.FromMilliseconds(25),
+                        TimeSpan.FromMilliseconds(25));
+                }
+                else
+                {
+                    _timer?.Dispose();
+                    _timer = null;
+                }
+            }
+        }
+
+        public static PointerActivitySample GetMouseActivity()
+        {
+            lock (_syncRoot)
+            {
+                SampleMouseLocked();
+                return new PointerActivitySample(
+                    _mousePosition,
+                    _mouseTimestamp,
+                    _hasMousePosition);
+            }
+        }
+
+        public static void RecordPenPosition(Vector2 position)
+        {
+            lock (_syncRoot)
+            {
+                _lastPenPosition = position;
+                _lastPenTimestamp = Stopwatch.GetTimestamp();
+                _hasPenPosition = true;
+            }
+        }
+
+        private static void SampleMouse()
+        {
+            lock (_syncRoot)
+                SampleMouseLocked();
+        }
+
+        private static void SampleMouseLocked()
+        {
+            if (!PrecisionControlDesktop.TryGetMousePosition(out var position))
+                return;
+
+            var now = Stopwatch.GetTimestamp();
+            if (!_hasMousePosition ||
+                Vector2.DistanceSquared(_mousePosition, position) > 0.01f)
+            {
+                _mousePosition = position;
+                _hasMousePosition = true;
+
+                var mirrorsRecentPen =
+                    _hasPenPosition &&
+                    Vector2.DistanceSquared(_lastPenPosition, position) <= 1f &&
+                    now - _lastPenTimestamp <= Stopwatch.Frequency / 10;
+                if (!mirrorsRecentPen)
+                    _mouseTimestamp = now;
+            }
+            else if (_mouseTimestamp == 0)
+            {
+                _mouseTimestamp = now;
+            }
+        }
+
+        private static readonly object _syncRoot = new();
+        private static Timer? _timer;
+        private static Vector2 _mousePosition;
+        private static Vector2 _lastPenPosition;
+        private static long _mouseTimestamp;
+        private static long _lastPenTimestamp;
+        private static bool _hasMousePosition;
+        private static bool _hasPenPosition;
     }
 
     internal readonly struct HotkeyGesture : IEquatable<HotkeyGesture>

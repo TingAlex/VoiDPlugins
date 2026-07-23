@@ -10,26 +10,18 @@ namespace PrecisionControl.Tests
     public sealed class PrecisionControlTests
     {
         [Fact]
-        public void GlobalHotkeyIsIgnoredWhenPenIsOutOfRange()
+        public void GlobalHotkeyWorksWhenPenIsOutOfRange()
         {
             using var filter = CreateFilter(out _, out var overlay);
-            var lastPosition = Vector2.Zero;
-            filter.Emit += report =>
-            {
-                if (report is ITabletReport tabletReport)
-                    lastPosition = tabletReport.Position;
-            };
+            filter.PositioningMode =
+                VoiDPlugins.Filter.PrecisionControl.PointerAnchoredMode;
 
             filter.Consume(new TestTabletReport(new Vector2(90, 90)));
             filter.Consume(new OutOfRangeReport(Array.Empty<byte>()));
 
-            Assert.False(PrecisionControlCoordinator.TryQueueGlobalToggle());
-            Assert.Equal(0, overlay.ShowCount);
-
-            filter.Consume(new TestTabletReport(new Vector2(100, 100)));
-            filter.Consume(new TestTabletReport(new Vector2(120, 100)));
-
-            Assert.Equal(new Vector2(120, 100), lastPosition);
+            Assert.True(PrecisionControlCoordinator.TryQueueGlobalToggle());
+            Assert.Equal(1, overlay.ShowCount);
+            AssertBounds(overlay.Bounds, -6, 36, 960, 540);
         }
 
         [Fact]
@@ -69,6 +61,19 @@ namespace PrecisionControl.Tests
             Assert.True(overlay.Bounds.Top <= 106);
             Assert.True(overlay.Bounds.Right >= 104);
             Assert.True(overlay.Bounds.Bottom >= 106);
+        }
+
+        [Fact]
+        public void ToggleRemainsAvailableWhilePenIsWriting()
+        {
+            using var filter = CreateFilter(out _, out var overlay);
+            filter.Consume(new TestTabletReport(new Vector2(100, 100), 512));
+
+            Assert.True(PrecisionControlCoordinator.TryQueueGlobalToggle());
+            Assert.Equal(1, overlay.ShowCount);
+
+            Assert.True(PrecisionControlCoordinator.TryQueueGlobalToggle());
+            Assert.Equal(1, overlay.HideCount);
         }
 
         [Fact]
@@ -124,12 +129,22 @@ namespace PrecisionControl.Tests
                 filter.PositioningMode);
             Assert.Equal(10f, filter.PointerPositionXPercent);
             Assert.Equal(10f, filter.PointerPositionYPercent);
+            Assert.Equal(
+                VoiDPlugins.Filter.PrecisionControl.LastActivePointerAnchor,
+                filter.ActivationAnchorSource);
             Assert.True(filter.EnableGlobalHotkey);
             Assert.Equal("P", filter.GlobalHotkeyKey);
             Assert.True(filter.HotkeyCtrl);
             Assert.True(filter.HotkeyAlt);
             Assert.True(filter.HotkeyShift);
             Assert.False(filter.HotkeyWindows);
+            Assert.True(filter.EnableNudgeHotkeys);
+            Assert.Equal("Up", filter.NudgeUpKey);
+            Assert.Equal("Down", filter.NudgeDownKey);
+            Assert.Equal("Left", filter.NudgeLeftKey);
+            Assert.Equal("Right", filter.NudgeRightKey);
+            Assert.Equal(20f, filter.HorizontalNudgePercent);
+            Assert.Equal(20f, filter.VerticalNudgePercent);
         }
 
         [Theory]
@@ -241,9 +256,9 @@ namespace PrecisionControl.Tests
         }
 
         [Theory]
-        [InlineData(10, 10, 0, 0)]
-        [InlineData(3830, 2150, 2880, 1620)]
-        public void PointerRelativeBoundsStayOnTheCurrentDisplay(
+        [InlineData(10, 10, -86, -44)]
+        [InlineData(3830, 2150, 3734, 2096)]
+        public void PointerAnchoredBoundsKeepTheirExactRelationshipAtDisplayEdges(
             float pointerX,
             float pointerY,
             int expectedLeft,
@@ -269,11 +284,11 @@ namespace PrecisionControl.Tests
                 10,
                 10);
 
-            AssertBounds(result, -1920, 0, 960, 540);
+            AssertBounds(result, -2006, -44, 960, 540);
         }
 
         [Fact]
-        public void PointerRelativeBoundsNeverExceedTheCurrentDisplay()
+        public void PointerAnchoredBoundsMayExceedTheCurrentDisplay()
         {
             var result = PrecisionBoundsCalculator.CalculatePointerRelative(
                 new OverlayBounds(0, 0, 1920, 1080),
@@ -282,7 +297,7 @@ namespace PrecisionControl.Tests
                 50,
                 50);
 
-            AssertBounds(result, 0, 0, 1920, 1080);
+            AssertBounds(result, -480, -270, 2880, 1620);
         }
 
         [Fact]
@@ -290,10 +305,9 @@ namespace PrecisionControl.Tests
         {
             using var filter = CreateFilter(out _, out var overlay);
             filter.PositioningMode =
-                VoiDPlugins.Filter.PrecisionControl.PointerRelativeMode;
+                VoiDPlugins.Filter.PrecisionControl.PointerAnchoredMode;
             filter.PointerPositionXPercent = 10;
             filter.PointerPositionYPercent = 10;
-            filter.PointerPositionProvider = _ => new Vector2(1000, 800);
             var lastPosition = Vector2.Zero;
             filter.Emit += report =>
             {
@@ -301,29 +315,195 @@ namespace PrecisionControl.Tests
                     lastPosition = tabletReport.Position;
             };
 
-            filter.Consume(new TestTabletReport(new Vector2(500, 400)));
+            filter.Consume(new TestTabletReport(new Vector2(1000, 800)));
             Assert.True(PrecisionControlCoordinator.TryQueueGlobalToggle());
 
             AssertBounds(overlay.Bounds, 904, 746, 960, 540);
 
-            filter.Consume(new TestTabletReport(new Vector2(500, 400)));
+            filter.Consume(new TestTabletReport(new Vector2(1000, 800)));
             Assert.Equal(new Vector2(1000, 800), lastPosition);
 
-            filter.Consume(new TestTabletReport(new Vector2(540, 440)));
+            filter.Consume(new TestTabletReport(new Vector2(1040, 840)));
             Assert.Equal(new Vector2(1010, 810), lastPosition);
 
             filter.Consume(new TestTabletReport(new Vector2(10000, 10000)));
             Assert.Equal(new Vector2(1863, 1285), lastPosition);
         }
 
+        [Fact]
+        public void PreviousPointerRelativeSettingUsesCurrentPenPosition()
+        {
+            using var filter = CreateFilter(out _, out var overlay);
+            filter.PositioningMode = "Pointer Relative";
+            filter.PointerPositionXPercent = 10;
+            filter.PointerPositionYPercent = 10;
+
+            filter.Consume(new TestTabletReport(new Vector2(1200, 900)));
+            Assert.True(PrecisionControlCoordinator.TryQueueGlobalToggle());
+
+            AssertBounds(overlay.Bounds, 1104, 846, 960, 540);
+        }
+
+        [Fact]
+        public void PreviousPenCursorRelativeSettingRemainsCompatible()
+        {
+            using var filter = CreateFilter(out _, out var overlay);
+            filter.PositioningMode = "Pen Cursor Relative";
+
+            filter.Consume(new TestTabletReport(new Vector2(1200, 900)));
+            Assert.True(PrecisionControlCoordinator.TryQueueGlobalToggle());
+
+            AssertBounds(overlay.Bounds, 1104, 846, 960, 540);
+        }
+
+        [Fact]
+        public void LastActivePointerUsesNewerMouseActivity()
+        {
+            using var filter = CreateFilter(out _, out var overlay);
+            filter.PositioningMode =
+                VoiDPlugins.Filter.PrecisionControl.PointerAnchoredMode;
+            filter.ActivationAnchorSource =
+                VoiDPlugins.Filter.PrecisionControl.LastActivePointerAnchor;
+            filter.MouseActivityProvider = () =>
+                new PointerActivitySample(
+                    new Vector2(2000, 1200),
+                    long.MaxValue);
+
+            filter.Consume(new TestTabletReport(new Vector2(1000, 800)));
+            Assert.True(PrecisionControlCoordinator.TryQueueGlobalToggle());
+
+            AssertBounds(overlay.Bounds, 1904, 1146, 960, 540);
+        }
+
+        [Fact]
+        public void LastPenAnchorIgnoresNewerMouseActivity()
+        {
+            using var filter = CreateFilter(out _, out var overlay);
+            filter.PositioningMode =
+                VoiDPlugins.Filter.PrecisionControl.PointerAnchoredMode;
+            filter.ActivationAnchorSource =
+                VoiDPlugins.Filter.PrecisionControl.LastPenPositionAnchor;
+            filter.MouseActivityProvider = () =>
+                new PointerActivitySample(
+                    new Vector2(2000, 1200),
+                    long.MaxValue);
+
+            filter.Consume(new TestTabletReport(new Vector2(1000, 800)));
+            Assert.True(PrecisionControlCoordinator.TryQueueGlobalToggle());
+
+            AssertBounds(overlay.Bounds, 904, 746, 960, 540);
+        }
+
+        [Fact]
+        public void MissingPenPositionFallsBackToMouse()
+        {
+            using var filter = CreateFilter(out _, out var overlay);
+            filter.PositioningMode =
+                VoiDPlugins.Filter.PrecisionControl.PointerAnchoredMode;
+            filter.ActivationAnchorSource =
+                VoiDPlugins.Filter.PrecisionControl.LastPenPositionAnchor;
+            filter.MouseActivityProvider = () =>
+                new PointerActivitySample(
+                    new Vector2(1500, 900),
+                    1);
+
+            Assert.True(PrecisionControlCoordinator.TryQueueGlobalToggle());
+
+            AssertBounds(overlay.Bounds, 1404, 846, 960, 540);
+        }
+
+        [Fact]
+        public void NudgeMovesTheFrameWithoutMovingAStationaryHoverCursor()
+        {
+            using var filter = CreateFilter(out _, out var overlay);
+            filter.PositioningMode =
+                VoiDPlugins.Filter.PrecisionControl.PointerAnchoredMode;
+            var lastPosition = Vector2.Zero;
+            filter.Emit += report =>
+            {
+                if (report is ITabletReport tabletReport)
+                    lastPosition = tabletReport.Position;
+            };
+
+            filter.Consume(new TestTabletReport(new Vector2(1000, 800)));
+            Assert.True(PrecisionControlCoordinator.TryQueueGlobalToggle());
+            filter.Consume(new TestTabletReport(new Vector2(5000, 800)));
+            Assert.Equal(new Vector2(1863, 800), lastPosition);
+
+            Assert.True(PrecisionControlCoordinator.TryQueueGlobalAction(
+                PrecisionControlAction.NudgeRight));
+            AssertBounds(overlay.Bounds, 1096, 746, 960, 540);
+
+            filter.Consume(new TestTabletReport(new Vector2(5000, 800)));
+            Assert.Equal(new Vector2(1863, 800), lastPosition);
+        }
+
+        [Fact]
+        public void NudgeWorksAfterPenLeavesRange()
+        {
+            using var filter = CreateFilter(out _, out var overlay);
+            filter.PositioningMode =
+                VoiDPlugins.Filter.PrecisionControl.PointerAnchoredMode;
+
+            filter.Consume(new TestTabletReport(new Vector2(1000, 800)));
+            Assert.True(PrecisionControlCoordinator.TryQueueGlobalToggle());
+            filter.Consume(new OutOfRangeReport(Array.Empty<byte>()));
+
+            Assert.True(PrecisionControlCoordinator.TryQueueGlobalAction(
+                PrecisionControlAction.NudgeDown));
+            AssertBounds(overlay.Bounds, 904, 854, 960, 540);
+        }
+
+        [Fact]
+        public void NudgeIsBlockedOnlyWhilePenIsWriting()
+        {
+            using var filter = CreateFilter(out _, out var overlay);
+            filter.PositioningMode =
+                VoiDPlugins.Filter.PrecisionControl.PointerAnchoredMode;
+
+            filter.Consume(new TestTabletReport(new Vector2(1000, 800)));
+            Assert.True(PrecisionControlCoordinator.TryQueueGlobalToggle());
+            filter.Consume(new TestTabletReport(new Vector2(1100, 850), 512));
+
+            Assert.False(PrecisionControlCoordinator.TryQueueGlobalAction(
+                PrecisionControlAction.NudgeLeft));
+            AssertBounds(overlay.Bounds, 904, 746, 960, 540);
+
+            filter.Consume(new TestTabletReport(new Vector2(1100, 850), 0));
+            Assert.True(PrecisionControlCoordinator.TryQueueGlobalAction(
+                PrecisionControlAction.NudgeLeft));
+            AssertBounds(overlay.Bounds, 712, 746, 960, 540);
+        }
+
         [Theory]
         [InlineData("P", 0x50)]
         [InlineData("f24", 0x87)]
         [InlineData("ScrollLock", 0x91)]
+        [InlineData("Up", 0x26)]
+        [InlineData("Right", 0x27)]
         public void SupportedHotkeyNamesMapToVirtualKeys(string key, uint expected)
         {
             Assert.True(GlobalHotkeyKeyMap.TryGetVirtualKey(key, out var actual));
             Assert.Equal(expected, actual);
+        }
+
+        [Fact]
+        public void DirectionHotkeysResolveToTheirConfiguredActions()
+        {
+            using var filter = CreateFilter(out _);
+            var gesture = new HotkeyGesture(
+                HotkeyModifiers.Control |
+                HotkeyModifiers.Alt |
+                HotkeyModifiers.Shift |
+                HotkeyModifiers.NoRepeat,
+                0x27,
+                "Ctrl+Alt+Shift+Right");
+
+            Assert.True(PrecisionControlGlobalHotkeyManager.TryMatch(
+                filter,
+                gesture,
+                out var action));
+            Assert.Equal(PrecisionControlAction.NudgeRight, action);
         }
 
         private static VoiDPlugins.Filter.PrecisionControl CreateFilter(
@@ -351,6 +531,8 @@ namespace PrecisionControl.Tests
             filter.Overlay = overlay;
             filter.OutputAreaProvider = _ =>
                 new OverlayBounds(0, 0, 3840, 2160);
+            filter.MouseActivityProvider = () =>
+                new PointerActivitySample(Vector2.Zero, 0, false);
             PrecisionControlCoordinator.Register(filter);
             return filter;
         }
