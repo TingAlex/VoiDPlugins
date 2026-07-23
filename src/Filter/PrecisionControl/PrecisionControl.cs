@@ -40,12 +40,27 @@ namespace VoiDPlugins.Filter
     [PluginName("Precision Control (TingAlex Enhanced)")]
     public class PrecisionControl : IPositionedPipelineElement<IDeviceReport>, IDisposable
     {
+        public const string ScreenRelativeMode = "Screen Relative (Legacy)";
+        public const string PointerRelativeMode = "Pointer Relative";
+
         public static string[] ValidGlobalHotkeyKeys => GlobalHotkeyKeyMap.Keys.ToArray();
+        public static string[] ValidPositioningModes =>
+            new[] { ScreenRelativeMode, PointerRelativeMode };
 
         public event Action<IDeviceReport>? Emit;
 
         [SliderProperty("Precision Multiplier", 0.0f, 10f, 0.3f), DefaultPropertyValue(0.3f)]
         public float Scale { get; set; }
+
+        [Property("Precision Area Positioning"), PropertyValidated(nameof(ValidPositioningModes))]
+        [DefaultPropertyValue(ScreenRelativeMode)]
+        public string? PositioningMode { get; set; } = ScreenRelativeMode;
+
+        [SliderProperty("Pointer Position X (%)", 0f, 100f, 1f), DefaultPropertyValue(10f)]
+        public float PointerPositionXPercent { get; set; } = 10f;
+
+        [SliderProperty("Pointer Position Y (%)", 0f, 100f, 1f), DefaultPropertyValue(10f)]
+        public float PointerPositionYPercent { get; set; } = 10f;
 
         [BooleanProperty("Show Precision Border", "Show a translucent, click-through border around the precision area.")]
         [DefaultPropertyValue(true)]
@@ -125,8 +140,15 @@ namespace VoiDPlugins.Filter
 
                     if (_isActive)
                     {
-                        var delta = (report.Position - _startingPoint) * Scale;
-                        report.Position = _startingPoint + delta;
+                        report.Position = _pointerRelativeActive
+                            ? PrecisionPositionCalculator.MapPointerRelative(
+                                report.Position,
+                                _startingPoint,
+                                _activationAnchor,
+                                Scale,
+                                _precisionBounds)
+                            : _startingPoint +
+                                ((report.Position - _startingPoint) * Scale);
                     }
                 }
                 value = report;
@@ -159,10 +181,7 @@ namespace VoiDPlugins.Filter
                 case PrecisionControlAction.Toggle:
                     _isActive = !_isActive;
                     if (_isActive)
-                    {
-                        _startingPoint = currentPosition;
-                        ShowPrecisionBorder();
-                    }
+                        ActivateAt(currentPosition);
                     else
                     {
                         _overlay?.Hide();
@@ -170,14 +189,46 @@ namespace VoiDPlugins.Filter
                     break;
                 case PrecisionControlAction.Activate:
                     _isActive = true;
-                    _startingPoint = currentPosition;
-                    ShowPrecisionBorder();
+                    ActivateAt(currentPosition);
                     break;
                 case PrecisionControlAction.Deactivate:
                     _isActive = false;
                     _overlay?.Hide();
                     break;
             }
+        }
+
+        private void ActivateAt(Vector2 currentPosition)
+        {
+            _startingPoint = currentPosition;
+            _pointerRelativeActive =
+                string.Equals(
+                    PositioningMode,
+                    PointerRelativeMode,
+                    StringComparison.Ordinal) &&
+                (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ||
+                    PointerPositionProvider != null ||
+                    OutputAreaProvider != null);
+
+            _activationAnchor = _pointerRelativeActive
+                ? PointerPositionProvider?.Invoke(currentPosition) ??
+                    PrecisionControlDesktop.GetPointerPosition(currentPosition)
+                : currentPosition;
+            var outputArea = OutputAreaProvider?.Invoke(_activationAnchor) ??
+                PrecisionControlDesktop.GetOutputArea(_activationAnchor);
+            _precisionBounds = _pointerRelativeActive
+                ? PrecisionBoundsCalculator.CalculatePointerRelative(
+                    outputArea,
+                    _activationAnchor,
+                    Scale,
+                    PointerPositionXPercent,
+                    PointerPositionYPercent)
+                : PrecisionBoundsCalculator.CalculateScreenRelative(
+                    outputArea,
+                    currentPosition,
+                    Scale);
+
+            ShowPrecisionBorder();
         }
 
         private void ShowPrecisionBorder()
@@ -199,8 +250,7 @@ namespace VoiDPlugins.Filter
 
             _overlay ??= PrecisionControlOverlayFactory.Create(borderColor);
             _overlay?.Show(
-                _startingPoint,
-                Scale,
+                _precisionBounds,
                 BorderThickness,
                 BorderOpacity);
         }
@@ -215,7 +265,10 @@ namespace VoiDPlugins.Filter
 
         private readonly ConcurrentQueue<PrecisionControlAction> _pendingActions = new();
         private Vector2 _startingPoint;
+        private Vector2 _activationAnchor;
+        private OverlayBounds _precisionBounds;
         private bool _isActive;
+        private bool _pointerRelativeActive;
         private bool _penInRange;
         private Vector2 _lastInRangePosition;
         private long _lastInRangeTimestamp;
@@ -224,7 +277,26 @@ namespace VoiDPlugins.Filter
         {
             set => _overlay = value;
         }
+        internal Func<Vector2, Vector2>? PointerPositionProvider { get; set; }
+        internal Func<Vector2, OverlayBounds>? OutputAreaProvider { get; set; }
         private IPrecisionControlOverlay? _overlay;
+    }
+
+    internal static class PrecisionPositionCalculator
+    {
+        public static Vector2 MapPointerRelative(
+            Vector2 currentPosition,
+            Vector2 startingPosition,
+            Vector2 activationAnchor,
+            float scale,
+            OverlayBounds bounds)
+        {
+            var mapped = activationAnchor +
+                ((currentPosition - startingPosition) * scale);
+            return new Vector2(
+                Math.Clamp(mapped.X, bounds.Left, bounds.Right - 1),
+                Math.Clamp(mapped.Y, bounds.Top, bounds.Bottom - 1));
+        }
     }
 
     internal enum PrecisionControlAction

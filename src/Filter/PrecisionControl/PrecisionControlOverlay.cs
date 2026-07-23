@@ -9,7 +9,7 @@ namespace VoiDPlugins.Filter
 {
     internal interface IPrecisionControlOverlay : IDisposable
     {
-        void Show(Vector2 anchor, float scale, float thickness, float opacity);
+        void Show(OverlayBounds bounds, float thickness, float opacity);
         void Hide();
     }
 
@@ -84,7 +84,7 @@ namespace VoiDPlugins.Filter
 
     internal static class PrecisionBoundsCalculator
     {
-        public static OverlayBounds Calculate(
+        public static OverlayBounds CalculateScreenRelative(
             OverlayBounds outputArea,
             Vector2 anchor,
             float scale)
@@ -105,6 +105,91 @@ namespace VoiDPlugins.Filter
                 roundedTop,
                 Math.Max(1, roundedRight - roundedLeft),
                 Math.Max(1, roundedBottom - roundedTop));
+        }
+
+        public static OverlayBounds CalculatePointerRelative(
+            OverlayBounds outputArea,
+            Vector2 pointer,
+            float scale,
+            float horizontalPercent,
+            float verticalPercent)
+        {
+            var safeScale = Math.Max(0, scale);
+            var width = Math.Clamp(
+                (int)Math.Ceiling(outputArea.Width * safeScale),
+                1,
+                Math.Max(1, outputArea.Width));
+            var height = Math.Clamp(
+                (int)Math.Ceiling(outputArea.Height * safeScale),
+                1,
+                Math.Max(1, outputArea.Height));
+            var horizontalRatio = Math.Clamp(horizontalPercent, 0, 100) / 100f;
+            var verticalRatio = Math.Clamp(verticalPercent, 0, 100) / 100f;
+            var requestedLeft =
+                (int)Math.Round(pointer.X - (width * horizontalRatio));
+            var requestedTop =
+                (int)Math.Round(pointer.Y - (height * verticalRatio));
+
+            return new OverlayBounds(
+                Math.Clamp(
+                    requestedLeft,
+                    outputArea.Left,
+                    outputArea.Right - width),
+                Math.Clamp(
+                    requestedTop,
+                    outputArea.Top,
+                    outputArea.Bottom - height),
+                width,
+                height);
+        }
+    }
+
+    internal static class PrecisionControlDesktop
+    {
+        public static Vector2 GetPointerPosition(Vector2 fallback)
+        {
+            if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) &&
+                OverlayNativeMethods.GetCursorPos(out var point))
+            {
+                return new Vector2(point.X, point.Y);
+            }
+
+            return fallback;
+        }
+
+        public static OverlayBounds GetOutputArea(Vector2 anchor)
+        {
+            if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                return new OverlayBounds(0, 0, 1, 1);
+
+            var point = new NativePoint
+            {
+                X = (int)Math.Round(anchor.X),
+                Y = (int)Math.Round(anchor.Y)
+            };
+            var monitor = OverlayNativeMethods.MonitorFromPoint(
+                point,
+                OverlayNativeMethods.MONITOR_DEFAULTTONEAREST);
+            var monitorInfo = new MonitorInfo
+            {
+                Size = (uint)Marshal.SizeOf<MonitorInfo>()
+            };
+
+            if (monitor != IntPtr.Zero &&
+                OverlayNativeMethods.GetMonitorInfo(monitor, ref monitorInfo))
+            {
+                return new OverlayBounds(
+                    monitorInfo.Monitor.Left,
+                    monitorInfo.Monitor.Top,
+                    monitorInfo.Monitor.Right - monitorInfo.Monitor.Left,
+                    monitorInfo.Monitor.Bottom - monitorInfo.Monitor.Top);
+            }
+
+            return new OverlayBounds(
+                OverlayNativeMethods.GetSystemMetrics(OverlayNativeMethods.SM_XVIRTUALSCREEN),
+                OverlayNativeMethods.GetSystemMetrics(OverlayNativeMethods.SM_YVIRTUALSCREEN),
+                OverlayNativeMethods.GetSystemMetrics(OverlayNativeMethods.SM_CXVIRTUALSCREEN),
+                OverlayNativeMethods.GetSystemMetrics(OverlayNativeMethods.SM_CYVIRTUALSCREEN));
         }
     }
 
@@ -128,15 +213,14 @@ namespace VoiDPlugins.Filter
             }
         }
 
-        public void Show(Vector2 anchor, float scale, float thickness, float opacity)
+        public void Show(OverlayBounds bounds, float thickness, float opacity)
         {
             if (_disposed)
                 return;
 
             lock (_stateLock)
             {
-                _pendingAnchor = anchor;
-                _pendingScale = scale;
+                _pendingBounds = bounds;
                 _pendingThickness = Math.Clamp((int)Math.Round(thickness), 1, 12);
                 _pendingOpacity = (byte)Math.Clamp(
                     (int)Math.Round(opacity * byte.MaxValue),
@@ -269,21 +353,15 @@ namespace VoiDPlugins.Filter
 
         private void ApplyPendingBounds()
         {
-            Vector2 anchor;
-            float scale;
+            OverlayBounds bounds;
             int thickness;
             byte opacity;
             lock (_stateLock)
             {
-                anchor = _pendingAnchor;
-                scale = _pendingScale;
+                bounds = _pendingBounds;
                 thickness = _pendingThickness;
                 opacity = _pendingOpacity;
             }
-            var bounds = PrecisionBoundsCalculator.Calculate(
-                GetOutputArea(anchor),
-                anchor,
-                scale);
 
             SetWindowBounds(_windows[0], bounds.Left, bounds.Top, bounds.Width, thickness, opacity);
             SetWindowBounds(
@@ -358,38 +436,6 @@ namespace VoiDPlugins.Filter
                     IntPtr.Zero);
         }
 
-        private static OverlayBounds GetOutputArea(Vector2 anchor)
-        {
-            var point = new NativePoint
-            {
-                X = (int)Math.Round(anchor.X),
-                Y = (int)Math.Round(anchor.Y)
-            };
-            var monitor = OverlayNativeMethods.MonitorFromPoint(
-                point,
-                OverlayNativeMethods.MONITOR_DEFAULTTONEAREST);
-            var monitorInfo = new MonitorInfo
-            {
-                Size = (uint)Marshal.SizeOf<MonitorInfo>()
-            };
-
-            if (monitor != IntPtr.Zero &&
-                OverlayNativeMethods.GetMonitorInfo(monitor, ref monitorInfo))
-            {
-                return new OverlayBounds(
-                    monitorInfo.Monitor.Left,
-                    monitorInfo.Monitor.Top,
-                    monitorInfo.Monitor.Right - monitorInfo.Monitor.Left,
-                    monitorInfo.Monitor.Bottom - monitorInfo.Monitor.Top);
-            }
-
-            return new OverlayBounds(
-                OverlayNativeMethods.GetSystemMetrics(OverlayNativeMethods.SM_XVIRTUALSCREEN),
-                OverlayNativeMethods.GetSystemMetrics(OverlayNativeMethods.SM_YVIRTUALSCREEN),
-                OverlayNativeMethods.GetSystemMetrics(OverlayNativeMethods.SM_CXVIRTUALSCREEN),
-                OverlayNativeMethods.GetSystemMetrics(OverlayNativeMethods.SM_CYVIRTUALSCREEN));
-        }
-
         private static IntPtr WindowProcedure(
             IntPtr window,
             uint message,
@@ -420,8 +466,7 @@ namespace VoiDPlugins.Filter
         private readonly Thread _thread;
         private readonly IntPtr[] _windows = new IntPtr[4];
         private string _className = string.Empty;
-        private Vector2 _pendingAnchor;
-        private float _pendingScale;
+        private OverlayBounds _pendingBounds;
         private int _pendingThickness;
         private byte _pendingOpacity;
         private uint _threadId;
@@ -563,6 +608,10 @@ namespace VoiDPlugins.Filter
 
         [DllImport("user32.dll")]
         public static extern IntPtr MonitorFromPoint(NativePoint point, uint flags);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        public static extern bool GetCursorPos(out NativePoint point);
 
         [DllImport(
             "user32.dll",

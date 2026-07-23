@@ -47,8 +47,7 @@ namespace PrecisionControl.Tests
 
             Assert.True(PrecisionControlCoordinator.TryQueueGlobalToggle());
             Assert.Equal(1, overlay.ShowCount);
-            Assert.Equal(new Vector2(100, 100), overlay.Anchor);
-            Assert.Equal(0.25f, overlay.Scale);
+            AssertBounds(overlay.Bounds, 75, 75, 960, 540);
 
             filter.Consume(new TestTabletReport(new Vector2(120, 100)));
 
@@ -66,7 +65,10 @@ namespace PrecisionControl.Tests
             Assert.True(PrecisionControlCoordinator.TryQueueGlobalToggle());
 
             Assert.Equal(1, overlay.ShowCount);
-            Assert.Equal(new Vector2(104, 106), overlay.Anchor);
+            Assert.True(overlay.Bounds.Left <= 104);
+            Assert.True(overlay.Bounds.Top <= 106);
+            Assert.True(overlay.Bounds.Right >= 104);
+            Assert.True(overlay.Bounds.Bottom >= 106);
         }
 
         [Fact]
@@ -117,6 +119,11 @@ namespace PrecisionControl.Tests
             Assert.Equal(2.0f, filter.BorderThickness);
             Assert.Equal("#000000", filter.BorderColor);
             Assert.Equal(0.4f, filter.BorderOpacity);
+            Assert.Equal(
+                VoiDPlugins.Filter.PrecisionControl.ScreenRelativeMode,
+                filter.PositioningMode);
+            Assert.Equal(10f, filter.PointerPositionXPercent);
+            Assert.Equal(10f, filter.PointerPositionYPercent);
             Assert.True(filter.EnableGlobalHotkey);
             Assert.Equal("P", filter.GlobalHotkeyKey);
             Assert.True(filter.HotkeyCtrl);
@@ -187,11 +194,11 @@ namespace PrecisionControl.Tests
         {
             var output = new OverlayBounds(0, 0, 3840, 2160);
 
-            var centered = PrecisionBoundsCalculator.Calculate(
+            var centered = PrecisionBoundsCalculator.CalculateScreenRelative(
                 output,
                 new Vector2(1920, 1080),
                 0.25f);
-            var offset = PrecisionBoundsCalculator.Calculate(
+            var offset = PrecisionBoundsCalculator.CalculateScreenRelative(
                 output,
                 new Vector2(100, 200),
                 0.25f);
@@ -205,12 +212,108 @@ namespace PrecisionControl.Tests
         {
             var output = new OverlayBounds(-1920, 0, 1920, 1080);
 
-            var result = PrecisionBoundsCalculator.Calculate(
+            var result = PrecisionBoundsCalculator.CalculateScreenRelative(
                 output,
                 new Vector2(-960, 540),
                 0.5f);
 
             AssertBounds(result, -1440, 270, 960, 540);
+        }
+
+        [Theory]
+        [InlineData(10, 10, 904, 746)]
+        [InlineData(50, 50, 520, 530)]
+        [InlineData(0, 100, 1000, 260)]
+        public void PointerRelativeBoundsPlacePointerAtConfiguredPercentage(
+            float horizontalPercent,
+            float verticalPercent,
+            int expectedLeft,
+            int expectedTop)
+        {
+            var result = PrecisionBoundsCalculator.CalculatePointerRelative(
+                new OverlayBounds(0, 0, 3840, 2160),
+                new Vector2(1000, 800),
+                0.25f,
+                horizontalPercent,
+                verticalPercent);
+
+            AssertBounds(result, expectedLeft, expectedTop, 960, 540);
+        }
+
+        [Theory]
+        [InlineData(10, 10, 0, 0)]
+        [InlineData(3830, 2150, 2880, 1620)]
+        public void PointerRelativeBoundsStayOnTheCurrentDisplay(
+            float pointerX,
+            float pointerY,
+            int expectedLeft,
+            int expectedTop)
+        {
+            var result = PrecisionBoundsCalculator.CalculatePointerRelative(
+                new OverlayBounds(0, 0, 3840, 2160),
+                new Vector2(pointerX, pointerY),
+                0.25f,
+                10,
+                10);
+
+            AssertBounds(result, expectedLeft, expectedTop, 960, 540);
+        }
+
+        [Fact]
+        public void PointerRelativeBoundsSupportNegativeDisplayCoordinates()
+        {
+            var result = PrecisionBoundsCalculator.CalculatePointerRelative(
+                new OverlayBounds(-1920, 0, 1920, 1080),
+                new Vector2(-1910, 10),
+                0.5f,
+                10,
+                10);
+
+            AssertBounds(result, -1920, 0, 960, 540);
+        }
+
+        [Fact]
+        public void PointerRelativeBoundsNeverExceedTheCurrentDisplay()
+        {
+            var result = PrecisionBoundsCalculator.CalculatePointerRelative(
+                new OverlayBounds(0, 0, 1920, 1080),
+                new Vector2(960, 540),
+                1.5f,
+                50,
+                50);
+
+            AssertBounds(result, 0, 0, 1920, 1080);
+        }
+
+        [Fact]
+        public void PointerRelativeModeDoesNotJumpAndClampsToItsBounds()
+        {
+            using var filter = CreateFilter(out _, out var overlay);
+            filter.PositioningMode =
+                VoiDPlugins.Filter.PrecisionControl.PointerRelativeMode;
+            filter.PointerPositionXPercent = 10;
+            filter.PointerPositionYPercent = 10;
+            filter.PointerPositionProvider = _ => new Vector2(1000, 800);
+            var lastPosition = Vector2.Zero;
+            filter.Emit += report =>
+            {
+                if (report is ITabletReport tabletReport)
+                    lastPosition = tabletReport.Position;
+            };
+
+            filter.Consume(new TestTabletReport(new Vector2(500, 400)));
+            Assert.True(PrecisionControlCoordinator.TryQueueGlobalToggle());
+
+            AssertBounds(overlay.Bounds, 904, 746, 960, 540);
+
+            filter.Consume(new TestTabletReport(new Vector2(500, 400)));
+            Assert.Equal(new Vector2(1000, 800), lastPosition);
+
+            filter.Consume(new TestTabletReport(new Vector2(540, 440)));
+            Assert.Equal(new Vector2(1010, 810), lastPosition);
+
+            filter.Consume(new TestTabletReport(new Vector2(10000, 10000)));
+            Assert.Equal(new Vector2(1863, 1285), lastPosition);
         }
 
         [Theory]
@@ -246,6 +349,8 @@ namespace PrecisionControl.Tests
                 Tablet = tablet
             };
             filter.Overlay = overlay;
+            filter.OutputAreaProvider = _ =>
+                new OverlayBounds(0, 0, 3840, 2160);
             PrecisionControlCoordinator.Register(filter);
             return filter;
         }
@@ -267,14 +372,12 @@ namespace PrecisionControl.Tests
         {
             public int ShowCount { get; private set; }
             public int HideCount { get; private set; }
-            public Vector2 Anchor { get; private set; }
-            public float Scale { get; private set; }
+            public OverlayBounds Bounds { get; private set; }
 
-            public void Show(Vector2 anchor, float scale, float thickness, float opacity)
+            public void Show(OverlayBounds bounds, float thickness, float opacity)
             {
                 ShowCount++;
-                Anchor = anchor;
-                Scale = scale;
+                Bounds = bounds;
             }
 
             public void Hide()

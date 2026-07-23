@@ -39,6 +39,21 @@ The global hotkey is a toggle. A hotkey received while the pen is out of range
 is ignored. If multiple tablets have an in-range pen, the most recently active
 tablet is selected.
 
+#### Precision area positioning
+
+`Precision Area Positioning` provides two coordinate modes:
+
+- `Screen Relative (Legacy)` preserves the original behavior. It scales the
+  full monitor area around the activation point, so the pointer keeps the same
+  relative position it had on the monitor.
+- `Pointer Relative` creates a fixed-size precision area directly from the
+  current Windows pointer position. `Pointer Position X (%)` and `Pointer
+  Position Y (%)` choose where the pointer sits inside that area. The defaults
+  are 10% from the left and 10% from the top; 50%/50% centers the area on the
+  pointer. Pointer movement is clamped to the displayed precision area. Near a
+  display edge, the area shifts inward so the full border remains visible on
+  the current display.
+
 When precision mode is active on Windows, the filter displays a thin,
 semi-transparent border around the effective precision area. The border is
 always on top, does not take focus, and lets mouse and pen input pass through.
