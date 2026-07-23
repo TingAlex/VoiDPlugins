@@ -11,7 +11,7 @@ namespace PrecisionControl.Tests
         [Fact]
         public void GlobalHotkeyIsIgnoredWhenPenIsOutOfRange()
         {
-            using var filter = CreateFilter(out _);
+            using var filter = CreateFilter(out _, out var overlay);
             var lastPosition = Vector2.Zero;
             filter.Emit += report =>
             {
@@ -19,9 +19,11 @@ namespace PrecisionControl.Tests
                     lastPosition = tabletReport.Position;
             };
 
+            filter.Consume(new TestTabletReport(new Vector2(90, 90)));
             filter.Consume(new OutOfRangeReport(Array.Empty<byte>()));
 
             Assert.False(PrecisionControlCoordinator.TryQueueGlobalToggle());
+            Assert.Equal(0, overlay.ShowCount);
 
             filter.Consume(new TestTabletReport(new Vector2(100, 100)));
             filter.Consume(new TestTabletReport(new Vector2(120, 100)));
@@ -43,35 +45,27 @@ namespace PrecisionControl.Tests
             filter.Consume(new TestTabletReport(new Vector2(100, 100)));
 
             Assert.True(PrecisionControlCoordinator.TryQueueGlobalToggle());
+            Assert.Equal(1, overlay.ShowCount);
+            Assert.Equal(new Vector2(100, 100), overlay.Anchor);
+            Assert.Equal(0.25f, overlay.Scale);
 
-            filter.Consume(new TestTabletReport(new Vector2(100, 100)));
             filter.Consume(new TestTabletReport(new Vector2(120, 100)));
 
             Assert.Equal(new Vector2(105, 100), lastPosition);
             Assert.Equal(1, overlay.ShowCount);
-            Assert.Equal(new Vector2(100, 100), overlay.Anchor);
-            Assert.Equal(0.25f, overlay.Scale);
         }
 
         [Fact]
-        public void LeavingRangeDropsAPendingGlobalToggle()
+        public void GlobalHotkeyImmediatelyTogglesAfterTipIsLiftedIntoHover()
         {
-            using var filter = CreateFilter(out _);
-            var lastPosition = Vector2.Zero;
-            filter.Emit += report =>
-            {
-                if (report is ITabletReport tabletReport)
-                    lastPosition = tabletReport.Position;
-            };
+            using var filter = CreateFilter(out _, out var overlay);
 
-            filter.Consume(new TestTabletReport(new Vector2(100, 100)));
+            filter.Consume(new TestTabletReport(new Vector2(100, 100), 512));
+            filter.Consume(new TestTabletReport(new Vector2(104, 106), 0));
             Assert.True(PrecisionControlCoordinator.TryQueueGlobalToggle());
 
-            filter.Consume(new OutOfRangeReport(Array.Empty<byte>()));
-            filter.Consume(new TestTabletReport(new Vector2(200, 200)));
-            filter.Consume(new TestTabletReport(new Vector2(220, 200)));
-
-            Assert.Equal(new Vector2(220, 200), lastPosition);
+            Assert.Equal(1, overlay.ShowCount);
+            Assert.Equal(new Vector2(104, 106), overlay.Anchor);
         }
 
         [Fact]
@@ -81,10 +75,9 @@ namespace PrecisionControl.Tests
 
             filter.Consume(new TestTabletReport(new Vector2(100, 100)));
             Assert.True(PrecisionControlCoordinator.TryQueueGlobalToggle());
-            filter.Consume(new TestTabletReport(new Vector2(100, 100)));
+            Assert.Equal(1, overlay.ShowCount);
 
             Assert.True(PrecisionControlCoordinator.TryQueueGlobalToggle());
-            filter.Consume(new TestTabletReport(new Vector2(100, 100)));
 
             Assert.Equal(1, overlay.ShowCount);
             Assert.Equal(1, overlay.HideCount);
@@ -98,7 +91,6 @@ namespace PrecisionControl.Tests
 
             filter.Consume(new TestTabletReport(new Vector2(100, 100)));
             Assert.True(PrecisionControlCoordinator.TryQueueGlobalToggle());
-            filter.Consume(new TestTabletReport(new Vector2(100, 100)));
 
             Assert.Equal(0, overlay.ShowCount);
             Assert.Equal(1, overlay.HideCount);
@@ -246,10 +238,10 @@ namespace PrecisionControl.Tests
 
         private struct TestTabletReport : ITabletReport
         {
-            public TestTabletReport(Vector2 position)
+            public TestTabletReport(Vector2 position, uint pressure = 0)
             {
                 Position = position;
-                Pressure = 0;
+                Pressure = pressure;
                 PenButtons = Array.Empty<bool>();
                 Raw = Array.Empty<byte>();
             }

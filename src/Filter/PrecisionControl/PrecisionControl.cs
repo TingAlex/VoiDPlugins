@@ -63,7 +63,7 @@ namespace VoiDPlugins.Filter
         {
             get
             {
-                lock (_rangeLock)
+                lock (_stateLock)
                     return _penInRange;
             }
         }
@@ -80,34 +80,26 @@ namespace VoiDPlugins.Filter
         {
             if (value is OutOfRangeReport)
             {
-                lock (_rangeLock)
-                {
+                lock (_stateLock)
                     _penInRange = false;
-                    _pendingGlobalToggleCount = 0;
-                }
             }
 
             if (value is ITabletReport report)
             {
-                int pendingGlobalToggleCount;
-                lock (_rangeLock)
+                lock (_stateLock)
                 {
                     _penInRange = true;
-                    pendingGlobalToggleCount = _pendingGlobalToggleCount;
-                    _pendingGlobalToggleCount = 0;
-                }
-                Interlocked.Exchange(ref _lastInRangeTimestamp, Stopwatch.GetTimestamp());
+                    _lastInRangePosition = report.Position;
+                    Interlocked.Exchange(ref _lastInRangeTimestamp, Stopwatch.GetTimestamp());
 
-                while (_pendingActions.TryDequeue(out var action))
-                    ApplyAction(action, report.Position);
+                    while (_pendingActions.TryDequeue(out var action))
+                        ApplyAction(action, report.Position);
 
-                if ((pendingGlobalToggleCount & 1) != 0)
-                    ApplyAction(PrecisionControlAction.Toggle, report.Position);
-
-                if (_isActive)
-                {
-                    var delta = (report.Position - _startingPoint) * Scale;
-                    report.Position = _startingPoint + delta;
+                    if (_isActive)
+                    {
+                        var delta = (report.Position - _startingPoint) * Scale;
+                        report.Position = _startingPoint + delta;
+                    }
                 }
                 value = report;
             }
@@ -122,12 +114,12 @@ namespace VoiDPlugins.Filter
 
         internal bool QueueGlobalToggle()
         {
-            lock (_rangeLock)
+            lock (_stateLock)
             {
                 if (!_penInRange)
                     return false;
 
-                _pendingGlobalToggleCount++;
+                ApplyAction(PrecisionControlAction.Toggle, _lastInRangePosition);
                 return true;
             }
         }
@@ -187,9 +179,9 @@ namespace VoiDPlugins.Filter
         private Vector2 _startingPoint;
         private bool _isActive;
         private bool _penInRange;
+        private Vector2 _lastInRangePosition;
         private long _lastInRangeTimestamp;
-        private int _pendingGlobalToggleCount;
-        private readonly object _rangeLock = new();
+        private readonly object _stateLock = new();
         internal IPrecisionControlOverlay? Overlay
         {
             set => _overlay = value;

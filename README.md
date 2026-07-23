@@ -24,8 +24,10 @@ VoiDPlugins is a collection of extensions for [OpenTabletDriver](https://github.
 
 The PrecisionControl assembly also provides a `Precision Control Global Hotkey`
 tool on Windows. It uses `RegisterHotKey`, not a low-level keyboard hook, and
-only queues a precision toggle while a pen is in range on a tablet that has the
-Precision Control filter enabled.
+only toggles precision while a pen is in range on a tablet that has the
+Precision Control filter enabled. The toggle is applied immediately at the
+latest hover position, so it does not wait for the pen to touch the tablet
+again.
 
 1. Enable the `Precision Control` filter and choose a precision multiplier.
 2. Enable the `Precision Control Global Hotkey` tool.
