@@ -24,12 +24,11 @@ namespace VoiDPlugins.OutputMode
 
             _currentPoint = Vector2.Clamp(_currentPoint + delta, Vector2.Zero, _maxPoint);
 
-            SetInternalPosition(_currentPoint);
-            Instance.EnableButtonBit((int)WindowsInkButtonFlags.InRange);
+            var reportAsInk = PreparePosition(_currentPoint);
             var pos = Convert(_currentPoint);
             RawPointer->X = (ushort)pos.X;
             RawPointer->Y = (ushort)pos.Y;
-            Dirty = true;
+            Dirty = reportAsInk;
         }
     }
 }

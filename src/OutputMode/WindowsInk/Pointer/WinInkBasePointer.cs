@@ -17,6 +17,8 @@ namespace VoiDPlugins.OutputMode
         private readonly IVirtualScreen _screen;
         private ThinOSPointer? _osPointer;
         private Vector2 _internalPos;
+        private bool _sync;
+        private bool _touchpadFriendlyHover;
         protected DigitizerInputReport* RawPointer { get; }
         protected VMultiInstance<DigitizerInputReport> Instance { get; }
         protected SharedStore SharedStore { get; }
@@ -24,7 +26,22 @@ namespace VoiDPlugins.OutputMode
 
         public bool Sync
         {
-            set => _osPointer = value ? new ThinOSPointer(_screen) : null;
+            set
+            {
+                _sync = value;
+                UpdateOSPointer();
+            }
+        }
+
+        public bool TouchpadFriendlyHover
+        {
+            get => _touchpadFriendlyHover;
+            set
+            {
+                _touchpadFriendlyHover = value;
+                SharedStore.SetOrAdd(TOUCHPAD_FRIENDLY_HOVER, value);
+                UpdateOSPointer();
+            }
         }
 
         public bool ForcedSync { get; set; }
@@ -43,6 +60,7 @@ namespace VoiDPlugins.OutputMode
                 SharedStore.SetOrAdd(ERASER_STATE, false);
                 SharedStore.SetOrAdd(MANUAL_ERASER, false);
                 SharedStore.SetOrAdd(TIP_PRESSED, false);
+                SharedStore.SetOrAdd(TOUCHPAD_FRIENDLY_HOVER, false);
             }
 
             if (Instance.Extended)
@@ -117,9 +135,37 @@ namespace VoiDPlugins.OutputMode
             _internalPos = pos;
         }
 
+        protected bool PreparePosition(Vector2 pos)
+        {
+            SetInternalPosition(pos);
+
+            if (!WindowsInkHoverPolicy.ShouldReportAsInk(
+                TouchpadFriendlyHover,
+                SharedStore.Get<bool>(TIP_PRESSED)))
+            {
+                var wasInRange = Instance.HasButtonBit((int)WindowsInkButtonFlags.InRange);
+                Instance.DisableButtonBit((int)WindowsInkButtonFlags.InRange);
+                Dirty = false;
+
+                if (wasInRange)
+                    Instance.Write();
+
+                SyncOSCursor();
+                return false;
+            }
+
+            Instance.EnableButtonBit((int)WindowsInkButtonFlags.InRange);
+            return true;
+        }
+
         private void SyncOSCursor()
         {
             _osPointer?.SetPosition(_internalPos);
+        }
+
+        private void UpdateOSPointer()
+        {
+            _osPointer = _sync || _touchpadFriendlyHover ? new ThinOSPointer(_screen) : null;
         }
     }
 }

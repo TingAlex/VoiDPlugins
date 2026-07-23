@@ -55,6 +55,15 @@ for Windows Precision Touchpad gesture configuration.
       100% compliance to Windows Ink
       Upto 8192 levels of pressure
 
+#### Touchpad-friendly hover
+
+Enable `Touchpad-friendly hover` on the Windows Ink output mode when Windows
+suppresses precision-touchpad gestures while a pen is in range. Hover movement
+is mirrored through the OS mouse cursor, while contact, pressure, tilt, and pen
+buttons continue to use Windows Ink. This makes touchpad gestures available
+while the pen is hovering, at the cost of native pen-hover semantics until the
+tip touches the tablet.
+
 ### [VMultiMode](https://github.com/X9VoiD/VoiDPlugins/wiki/VMultiMode)
 
       Classic VMulti input emulation
