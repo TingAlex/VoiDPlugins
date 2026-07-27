@@ -111,6 +111,14 @@ namespace VoiDPlugins.Filter
         [BooleanProperty("Hotkey Windows", "Require the Windows key."), DefaultPropertyValue(false)]
         public bool HotkeyWindows { get; set; }
 
+        [BooleanProperty("Enable Reposition Hotkey", "Show or move the precision area directly to the current mouse position.")]
+        [DefaultPropertyValue(true)]
+        public bool EnableRepositionHotkey { get; set; } = true;
+
+        [Property("Reposition Hotkey Key"), PropertyValidated(nameof(ValidGlobalHotkeyKeys))]
+        [DefaultPropertyValue("R")]
+        public string? RepositionHotkeyKey { get; set; } = "R";
+
         [BooleanProperty("Enable Nudge Hotkeys", "Move the active precision area with global shortcuts while the pen is not writing.")]
         [DefaultPropertyValue(true)]
         public bool EnableNudgeHotkeys { get; set; } = true;
@@ -212,11 +220,12 @@ namespace VoiDPlugins.Filter
         {
             lock (_stateLock)
             {
+                if (action == PrecisionControlAction.Reposition &&
+                    _isWriting)
+                    return false;
                 if (IsNudgeAction(action) &&
                     (!_isActive || _isWriting))
-                {
                     return false;
-                }
 
                 var currentPosition = _hasLastRawPenPosition
                     ? _lastRawPenPosition
@@ -252,6 +261,12 @@ namespace VoiDPlugins.Filter
                     _isActive = false;
                     _overlay?.Hide();
                     break;
+                case PrecisionControlAction.Reposition:
+                    _isActive = true;
+                    ActivateAt(
+                        currentPosition,
+                        ResolveCurrentMouseAnchor(currentPosition));
+                    break;
                 case PrecisionControlAction.NudgeUp:
                 case PrecisionControlAction.NudgeDown:
                 case PrecisionControlAction.NudgeLeft:
@@ -261,9 +276,12 @@ namespace VoiDPlugins.Filter
             }
         }
 
-        private void ActivateAt(Vector2 currentPosition)
+        private void ActivateAt(
+            Vector2 currentPosition,
+            Vector2? anchorOverride = null)
         {
-            _activationAnchor = ResolveActivationAnchor(currentPosition);
+            _activationAnchor = anchorOverride ??
+                ResolveActivationAnchor(currentPosition);
             _startingPoint = _hasLastRawPenPosition
                 ? _lastRawPenPosition
                 : currentPosition;
@@ -342,6 +360,17 @@ namespace VoiDPlugins.Filter
             return mouse.Available ? mouse.Position :
                 hasPen ? _lastPenCursorPosition :
                 fallback;
+        }
+
+        private Vector2 ResolveCurrentMouseAnchor(Vector2 fallback)
+        {
+            var mouse = MouseActivityProvider?.Invoke() ??
+                PointerActivityTracker.GetMouseActivity();
+            if (mouse.Available)
+                return mouse.Position;
+            if (_hasLastPenCursorPosition)
+                return _lastPenCursorPosition;
+            return fallback;
         }
 
         private void Nudge(PrecisionControlAction action)
@@ -480,6 +509,7 @@ namespace VoiDPlugins.Filter
         Toggle,
         Activate,
         Deactivate,
+        Reposition,
         NudgeUp,
         NudgeDown,
         NudgeLeft,
@@ -558,13 +588,15 @@ namespace VoiDPlugins.Filter
         {
             return action == PrecisionControlAction.Toggle
                 ? filter.EnableGlobalHotkey
-                : action is
-                    PrecisionControlAction.NudgeUp or
-                    PrecisionControlAction.NudgeDown or
-                    PrecisionControlAction.NudgeLeft or
-                    PrecisionControlAction.NudgeRight
-                    ? filter.EnableNudgeHotkeys
-                    : true;
+                : action == PrecisionControlAction.Reposition
+                    ? filter.EnableRepositionHotkey
+                    : action is
+                        PrecisionControlAction.NudgeUp or
+                        PrecisionControlAction.NudgeDown or
+                        PrecisionControlAction.NudgeLeft or
+                        PrecisionControlAction.NudgeRight
+                        ? filter.EnableNudgeHotkeys
+                        : true;
         }
 
         private static readonly object _syncRoot = new();

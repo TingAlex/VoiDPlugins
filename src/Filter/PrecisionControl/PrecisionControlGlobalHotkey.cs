@@ -164,6 +164,12 @@ namespace VoiDPlugins.Filter
                 },
                 new
                 {
+                    Enabled = filter.EnableRepositionHotkey,
+                    Key = filter.RepositionHotkeyKey,
+                    Action = PrecisionControlAction.Reposition
+                },
+                new
+                {
                     Enabled = filter.EnableNudgeHotkeys,
                     Key = filter.NudgeUpKey,
                     Action = PrecisionControlAction.NudgeUp
@@ -301,6 +307,7 @@ namespace VoiDPlugins.Filter
             return action switch
             {
                 PrecisionControlAction.Toggle => "toggle",
+                PrecisionControlAction.Reposition => "reposition",
                 PrecisionControlAction.NudgeUp => "nudge-up",
                 PrecisionControlAction.NudgeDown => "nudge-down",
                 PrecisionControlAction.NudgeLeft => "nudge-left",

@@ -138,6 +138,8 @@ namespace PrecisionControl.Tests
             Assert.True(filter.HotkeyAlt);
             Assert.True(filter.HotkeyShift);
             Assert.False(filter.HotkeyWindows);
+            Assert.True(filter.EnableRepositionHotkey);
+            Assert.Equal("R", filter.RepositionHotkeyKey);
             Assert.True(filter.EnableNudgeHotkeys);
             Assert.Equal("Up", filter.NudgeUpKey);
             Assert.Equal("Down", filter.NudgeDownKey);
@@ -413,6 +415,67 @@ namespace PrecisionControl.Tests
         }
 
         [Fact]
+        public void RepositionShowsHiddenAreaAtCurrentMousePosition()
+        {
+            using var filter = CreateFilter(out _, out var overlay);
+            filter.PositioningMode =
+                VoiDPlugins.Filter.PrecisionControl.PointerAnchoredMode;
+            filter.MouseActivityProvider = () =>
+                new PointerActivitySample(
+                    new Vector2(2000, 1200),
+                    long.MaxValue);
+
+            Assert.True(PrecisionControlCoordinator.TryQueueGlobalAction(
+                PrecisionControlAction.Reposition));
+
+            Assert.Equal(1, overlay.ShowCount);
+            Assert.Equal(0, overlay.HideCount);
+            AssertBounds(overlay.Bounds, 1904, 1146, 960, 540);
+        }
+
+        [Fact]
+        public void RepositionReplacesVisibleAreaWithoutHidingItFirst()
+        {
+            using var filter = CreateFilter(out _, out var overlay);
+            filter.PositioningMode =
+                VoiDPlugins.Filter.PrecisionControl.PointerAnchoredMode;
+            filter.ActivationAnchorSource =
+                VoiDPlugins.Filter.PrecisionControl.LastPenPositionAnchor;
+
+            filter.Consume(new TestTabletReport(new Vector2(1000, 800)));
+            Assert.True(PrecisionControlCoordinator.TryQueueGlobalToggle());
+            AssertBounds(overlay.Bounds, 904, 746, 960, 540);
+
+            Assert.True(PrecisionControlCoordinator.TryQueueGlobalAction(
+                PrecisionControlAction.NudgeRight));
+            AssertBounds(overlay.Bounds, 1096, 746, 960, 540);
+
+            filter.MouseActivityProvider = () =>
+                new PointerActivitySample(
+                    new Vector2(2000, 1200),
+                    long.MaxValue);
+            Assert.True(PrecisionControlCoordinator.TryQueueGlobalAction(
+                PrecisionControlAction.Reposition));
+
+            Assert.Equal(3, overlay.ShowCount);
+            Assert.Equal(0, overlay.HideCount);
+            AssertBounds(overlay.Bounds, 1904, 1146, 960, 540);
+        }
+
+        [Fact]
+        public void RepositionIsBlockedWhilePenIsWriting()
+        {
+            using var filter = CreateFilter(out _, out var overlay);
+            filter.PositioningMode =
+                VoiDPlugins.Filter.PrecisionControl.PointerAnchoredMode;
+            filter.Consume(new TestTabletReport(new Vector2(1000, 800), 512));
+
+            Assert.False(PrecisionControlCoordinator.TryQueueGlobalAction(
+                PrecisionControlAction.Reposition));
+            Assert.Equal(0, overlay.ShowCount);
+        }
+
+        [Fact]
         public void NudgeDefersCursorMovementUntilTheNextPenReport()
         {
             using var filter = CreateFilter(out _, out var overlay);
@@ -534,6 +597,25 @@ namespace PrecisionControl.Tests
                 gesture,
                 out var action));
             Assert.Equal(PrecisionControlAction.NudgeRight, action);
+        }
+
+        [Fact]
+        public void RepositionHotkeyResolvesToItsAction()
+        {
+            using var filter = CreateFilter(out _);
+            var gesture = new HotkeyGesture(
+                HotkeyModifiers.Control |
+                HotkeyModifiers.Alt |
+                HotkeyModifiers.Shift |
+                HotkeyModifiers.NoRepeat,
+                0x52,
+                "Ctrl+Alt+Shift+R");
+
+            Assert.True(PrecisionControlGlobalHotkeyManager.TryMatch(
+                filter,
+                gesture,
+                out var action));
+            Assert.Equal(PrecisionControlAction.Reposition, action);
         }
 
         private static VoiDPlugins.Filter.PrecisionControl CreateFilter(
