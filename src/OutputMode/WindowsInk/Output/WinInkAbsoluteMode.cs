@@ -22,6 +22,10 @@ namespace VoiDPlugins.OutputMode
         [DefaultPropertyValue(false)]
         public bool ForcedSync { get; set; }
 
+        [BooleanProperty("Touchpad-friendly hover", "Keep precision-touchpad gestures available while the pen is hovering. Hover uses the OS mouse cursor; Windows Ink activates when the pen touches the tablet.")]
+        [DefaultPropertyValue(false)]
+        public bool TouchpadFriendlyHover { get; set; }
+
         [Resolved]
         public IServiceProvider ServiceProvider
         {
@@ -37,7 +41,8 @@ namespace VoiDPlugins.OutputMode
                 _pointer = new WinInkAbsolutePointer(value, _virtualScreen!)
                 {
                     Sync = Sync,
-                    ForcedSync = ForcedSync
+                    ForcedSync = ForcedSync,
+                    TouchpadFriendlyHover = TouchpadFriendlyHover
                 };
             }
         }

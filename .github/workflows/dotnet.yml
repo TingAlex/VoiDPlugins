@@ -44,3 +44,35 @@ jobs:
           !./build/${{ matrix.plugin }}/OpenTabletDriver.Plugin.dll
           !./build/${{ matrix.plugin }}/Newtonsoft.Json.dll
           !./build/${{ matrix.plugin }}/HidSharpCore.dll
+
+  Test-PrecisionControl:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@master
+      with:
+        submodules: recursive
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@main
+      with:
+        dotnet-version: '6.0'
+
+    - name: Test PrecisionControl
+      run: dotnet test ./tests/PrecisionControl.Tests/PrecisionControl.Tests.csproj --configuration Release
+
+  Test-WindowsInk:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@master
+      with:
+        submodules: recursive
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@main
+      with:
+        dotnet-version: '6.0'
+
+    - name: Test WindowsInk
+      run: dotnet test ./tests/WindowsInk.Tests/WindowsInk.Tests.csproj --configuration Release

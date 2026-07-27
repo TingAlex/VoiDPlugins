@@ -53,11 +53,12 @@ namespace VoiDPlugins.OutputMode
             {
                 case "Pen Tip":
                     _sharedStore.Set(TIP_PRESSED, true);
-                    _instance.EnableButtonBit((int)(eraserState ? WindowsInkButtonFlags.Eraser : WindowsInkButtonFlags.Press));
+                    _instance.EnableButtonBit((int)(WindowsInkButtonFlags.InRange |
+                        (eraserState ? WindowsInkButtonFlags.Eraser : WindowsInkButtonFlags.Press)));
                     break;
 
                 case "Pen Button":
-                    _instance.EnableButtonBit((int)WindowsInkButtonFlags.Barrel);
+                    _instance.EnableButtonBit((int)(WindowsInkButtonFlags.InRange | WindowsInkButtonFlags.Barrel));
                     break;
 
                 case "Eraser (Toggle)":
@@ -83,10 +84,12 @@ namespace VoiDPlugins.OutputMode
                 case "Pen Tip":
                     _sharedStore.Set(TIP_PRESSED, false);
                     _instance.DisableButtonBit((int)(WindowsInkButtonFlags.Press | WindowsInkButtonFlags.Eraser));
+                    DisableTouchpadFriendlyInRangeIfIdle();
                     break;
 
                 case "Pen Button":
                     _instance.DisableButtonBit((int)WindowsInkButtonFlags.Barrel);
+                    DisableTouchpadFriendlyInRangeIfIdle();
                     break;
 
                 case "Eraser (Hold)":
@@ -95,6 +98,17 @@ namespace VoiDPlugins.OutputMode
                     break;
             }
             _instance.Write();
+        }
+
+        private void DisableTouchpadFriendlyInRangeIfIdle()
+        {
+            if (!WindowsInkHoverPolicy.ShouldKeepInRangeAfterButtonRelease(
+                _sharedStore.Get<bool>(TOUCHPAD_FRIENDLY_HOVER),
+                _sharedStore.Get<bool>(TIP_PRESSED),
+                _instance.HasButtonBit((int)WindowsInkButtonFlags.Barrel)))
+            {
+                _instance.DisableButtonBit((int)WindowsInkButtonFlags.InRange);
+            }
         }
 
         internal static void EraserStateTransition(SharedStore store, VMultiInstance instance, bool isEraser)
@@ -117,12 +131,16 @@ namespace VoiDPlugins.OutputMode
                 report->Header.Buttons = 0;
                 instance.Write();
 
-                // Send In-Range but no tips
-                instance.EnableButtonBit((int)WindowsInkButtonFlags.InRange);
+                var reportInRange = WindowsInkHoverPolicy.ShouldReportAsInk(
+                    store.Get<bool>(TOUCHPAD_FRIENDLY_HOVER),
+                    store.Get<bool>(TIP_PRESSED));
+                if (reportInRange)
+                    instance.EnableButtonBit((int)WindowsInkButtonFlags.InRange);
                 if (eraserState)
                     instance.EnableButtonBit((int)WindowsInkButtonFlags.Invert);
 
-                instance.Write();
+                if (reportInRange)
+                    instance.Write();
 
                 // Set Proper Report
                 if (VMultiInstance.HasBit(buttons, (int)(WindowsInkButtonFlags.Press | WindowsInkButtonFlags.Eraser)))
