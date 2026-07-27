@@ -301,7 +301,7 @@ namespace PrecisionControl.Tests
         }
 
         [Fact]
-        public void PointerRelativeModeDoesNotJumpAndClampsToItsBounds()
+        public void PointerAnchoredModeMapsTabletPositionIntoItsBounds()
         {
             using var filter = CreateFilter(out _, out var overlay);
             filter.PositioningMode =
@@ -321,10 +321,10 @@ namespace PrecisionControl.Tests
             AssertBounds(overlay.Bounds, 904, 746, 960, 540);
 
             filter.Consume(new TestTabletReport(new Vector2(1000, 800)));
-            Assert.Equal(new Vector2(1000, 800), lastPosition);
+            Assert.Equal(new Vector2(1154, 946), lastPosition);
 
             filter.Consume(new TestTabletReport(new Vector2(1040, 840)));
-            Assert.Equal(new Vector2(1010, 810), lastPosition);
+            Assert.Equal(new Vector2(1164, 956), lastPosition);
 
             filter.Consume(new TestTabletReport(new Vector2(10000, 10000)));
             Assert.Equal(new Vector2(1863, 1285), lastPosition);
@@ -413,7 +413,7 @@ namespace PrecisionControl.Tests
         }
 
         [Fact]
-        public void NudgeMovesTheFrameWithoutMovingAStationaryHoverCursor()
+        public void NudgeDefersCursorMovementUntilTheNextPenReport()
         {
             using var filter = CreateFilter(out _, out var overlay);
             filter.PositioningMode =
@@ -427,15 +427,45 @@ namespace PrecisionControl.Tests
 
             filter.Consume(new TestTabletReport(new Vector2(1000, 800)));
             Assert.True(PrecisionControlCoordinator.TryQueueGlobalToggle());
-            filter.Consume(new TestTabletReport(new Vector2(5000, 800)));
-            Assert.Equal(new Vector2(1863, 800), lastPosition);
+            filter.Consume(new TestTabletReport(new Vector2(3600, 2000)));
+            Assert.Equal(new Vector2(1804, 1246), lastPosition);
 
             Assert.True(PrecisionControlCoordinator.TryQueueGlobalAction(
                 PrecisionControlAction.NudgeRight));
             AssertBounds(overlay.Bounds, 1096, 746, 960, 540);
+            Assert.Equal(new Vector2(1804, 1246), lastPosition);
 
-            filter.Consume(new TestTabletReport(new Vector2(5000, 800)));
-            Assert.Equal(new Vector2(1863, 800), lastPosition);
+            filter.Consume(new TestTabletReport(new Vector2(3600, 2000)));
+            Assert.Equal(new Vector2(1996, 1246), lastPosition);
+        }
+
+        [Theory]
+        [InlineData(0, 0, 904, 746)]
+        [InlineData(1920, 1080, 1384, 1016)]
+        [InlineData(3840, 2160, 1863, 1285)]
+        public void ReturningPenUsesItsAbsoluteTabletRatio(
+            float penX,
+            float penY,
+            float expectedX,
+            float expectedY)
+        {
+            using var filter = CreateFilter(out _);
+            filter.PositioningMode =
+                VoiDPlugins.Filter.PrecisionControl.PointerAnchoredMode;
+
+            filter.Consume(new TestTabletReport(new Vector2(1000, 800)));
+            Assert.True(PrecisionControlCoordinator.TryQueueGlobalToggle());
+
+            Vector2 lastPosition = default;
+            filter.Emit += report =>
+            {
+                if (report is ITabletReport tabletReport)
+                    lastPosition = tabletReport.Position;
+            };
+            filter.Consume(new OutOfRangeReport(Array.Empty<byte>()));
+            filter.Consume(new TestTabletReport(new Vector2(penX, penY)));
+
+            Assert.Equal(new Vector2(expectedX, expectedY), lastPosition);
         }
 
         [Fact]

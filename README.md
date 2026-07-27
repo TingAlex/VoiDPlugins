@@ -67,8 +67,10 @@ configured independently.
 The area keeps the exact configured relationship to its anchor. It is not
 shifted back inside a display near an edge, and directional moves may also
 place part of the area off-screen. Moving the area does not synthesize pointer
-movement. The current pen cursor stays still, then resumes from the translated
-area when the pen reports movement again.
+movement, so the current pen cursor stays still during the gesture. On the
+next pen report, the full tablet/output area is mapped proportionally into the
+translated precision area: tablet top-left maps to area top-left, center maps
+to center, and bottom-right maps to bottom-right.
 
 When precision mode is active on Windows, the filter displays a thin,
 semi-transparent border around the effective precision area. The border is

@@ -187,11 +187,9 @@ namespace VoiDPlugins.Filter
                     if (_isActive)
                     {
                         report.Position = _pointerRelativeActive
-                            ? PrecisionPositionCalculator.MapPointerRelative(
+                            ? PrecisionPositionCalculator.MapOutputAreaToBounds(
                                 rawPosition,
-                                _startingPoint,
-                                _activationAnchor,
-                                Scale,
+                                _outputArea,
                                 _precisionBounds)
                             : _activationAnchor +
                                 ((rawPosition - _startingPoint) * Scale);
@@ -286,17 +284,17 @@ namespace VoiDPlugins.Filter
                 (RuntimeInformation.IsOSPlatform(OSPlatform.Windows) ||
                     OutputAreaProvider != null);
 
-            var outputArea = OutputAreaProvider?.Invoke(_activationAnchor) ??
+            _outputArea = OutputAreaProvider?.Invoke(_activationAnchor) ??
                 PrecisionControlDesktop.GetOutputArea(_activationAnchor);
             _precisionBounds = _pointerRelativeActive
                 ? PrecisionBoundsCalculator.CalculatePointerRelative(
-                    outputArea,
+                    _outputArea,
                     _activationAnchor,
                     Scale,
                     PointerPositionXPercent,
                     PointerPositionYPercent)
                 : PrecisionBoundsCalculator.CalculateScreenRelative(
-                    outputArea,
+                    _outputArea,
                     _activationAnchor,
                     Scale);
 
@@ -369,11 +367,8 @@ namespace VoiDPlugins.Filter
 
             _precisionBounds = _precisionBounds.Translate(deltaX, deltaY);
 
-            if (_hasLastRawPenPosition && _hasLastPenCursorPosition)
-            {
-                _startingPoint = _lastRawPenPosition;
-                _activationAnchor = _lastPenCursorPosition;
-            }
+            if (!_pointerRelativeActive)
+                _activationAnchor += new Vector2(deltaX, deltaY);
 
             ShowPrecisionBorder();
         }
@@ -437,6 +432,7 @@ namespace VoiDPlugins.Filter
         private readonly ConcurrentQueue<PrecisionControlAction> _pendingActions = new();
         private Vector2 _startingPoint;
         private Vector2 _activationAnchor;
+        private OverlayBounds _outputArea;
         private OverlayBounds _precisionBounds;
         private bool _isActive;
         private bool _pointerRelativeActive;
@@ -459,15 +455,20 @@ namespace VoiDPlugins.Filter
 
     internal static class PrecisionPositionCalculator
     {
-        public static Vector2 MapPointerRelative(
+        public static Vector2 MapOutputAreaToBounds(
             Vector2 currentPosition,
-            Vector2 startingPosition,
-            Vector2 activationAnchor,
-            float scale,
+            OverlayBounds outputArea,
             OverlayBounds bounds)
         {
-            var mapped = activationAnchor +
-                ((currentPosition - startingPosition) * scale);
+            var horizontalRatio =
+                (currentPosition.X - outputArea.Left) /
+                Math.Max(1, outputArea.Width);
+            var verticalRatio =
+                (currentPosition.Y - outputArea.Top) /
+                Math.Max(1, outputArea.Height);
+            var mapped = new Vector2(
+                bounds.Left + (horizontalRatio * bounds.Width),
+                bounds.Top + (verticalRatio * bounds.Height));
             return new Vector2(
                 Math.Clamp(mapped.X, bounds.Left, bounds.Right - 1),
                 Math.Clamp(mapped.Y, bounds.Top, bounds.Bottom - 1));
