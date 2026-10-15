@@ -10,7 +10,54 @@ tablet buttons.
 The enhanced plugin is displayed as **Precision Control (TingAlex Enhanced)**,
 so it can be distinguished from the upstream filter in OpenTabletDriver.
 
-## Precision Control v1.0.0 quick start
+## Precision Control v1.1.2 (source build)
+
+The latest source includes dual-dial area movement and Chinese settings with
+numbered groups and hover help. Keyboard nudge options are hidden from the
+settings page; their built-in defaults remain enabled (arrow keys with the
+shared modifiers, 20% of area width/height per press). Previously saved custom
+nudge values are retained in settings files but are not loaded while these
+properties are hidden.
+
+### Pull and build on another computer
+
+```powershell
+git clone --recurse-submodules --branch agent/global-hotkey-precision-control https://github.com/TingAlex/VoiDPlugins.git
+cd VoiDPlugins
+dotnet build src/Filter/PrecisionControl/PrecisionControl.csproj -c Release
+dotnet test tests/PrecisionControl.Tests/PrecisionControl.Tests.csproj -c Release
+```
+
+For an existing checkout, switch to this branch, run `git pull --ff-only`,
+then `git submodule update --init --recursive` before building. Building requires
+a .NET SDK supporting net6.0; running tests requires the .NET 6 runtime.
+
+Exit OpenTabletDriver and its daemon, back up the existing plugin folder and
+settings.json, then replace the existing PrecisionControl.dll with
+`src/Filter/PrecisionControl/bin/Release/net6.0/PrecisionControl.dll`.
+Restart the driver. Do not install a second copy of the same plugin.
+
+### Configure the two dials
+
+Under Bindings, select **Precision Control Move Area (Dial)** for each rotation:
+
+| Dial | Clockwise Direction | Counterclockwise Direction |
+| --- | --- | --- |
+| 1 (horizontal) | Right | Left |
+| 2 (vertical) | Down | Up |
+
+For Wacom PTK-670, retain 15-degree activation thresholds (24 detents per turn).
+In the filter's **02 双旋钮** group, set horizontal and vertical distances
+independently, from 1 to 1000 screen pixels per tick (default 40).
+The dials translate the current area without changing its size. When the area
+is inactive or the pen is writing, ticks are discarded and never replayed.
+Out-of-range pen movement is not required. Bindings must be configured on
+each computer; pulling source does not change local driver settings.
+
+The settings page now shows six groups: 映射区域, 双旋钮, 边框外观, 快捷键,
+公共修饰键, and 进阶定位. Hover over each control for its explanation.
+
+## Precision Control v1.0.0 release quick start
 
 ### Requirements
 

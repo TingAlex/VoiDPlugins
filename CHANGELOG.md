@@ -3,6 +3,25 @@
 All notable changes to Precision Control (TingAlex Enhanced) are documented in
 this file.
 
+## [1.1.2] - 2026-10-14
+
+- Hid keyboard nudge controls from the generated settings page and renumbered
+  the remaining groups. Nudge behavior uses built-in defaults; old custom
+  values remain on disk but are no longer loaded by the generated settings system.
+
+## [1.1.1] - 2026-10-14
+
+- Organized settings into numbered Chinese groups with descriptive labels,
+  units, and contextual tooltips. Put the two dial distances near the top.
+
+## [1.1.0] - 2026-10-14
+
+- Added `Precision Control Move Area (Dial)` bindings with Left/Right/Up/Down.
+- Added independent horizontal and vertical dial distances in screen pixels
+  (default 40 px per tick), separate from the existing percentage-based hotkeys.
+- Dial input moves the current area immediately, including with the pen out of
+  range. Inactive and active-stroke input is discarded without later replay.
+
 ## [1.0.0] - 2026-07-28
 
 First stable release of the enhanced Precision Control workflow.
