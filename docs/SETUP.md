@@ -1,126 +1,101 @@
-# 安装与配置 / Installation and setup
+# 安装与使用 / Install and use
 
-[中文首页](../README.zh-CN.md) · [English overview](../README.md)
+适用源码版本：**1.6.0**。完整字段解释见 [设置参考](SETTINGS.md)，编译与打包见 [开发指南](DEVELOPMENT.md)。
 
-## 1. 先让笔正常工作 / Set up pen input first
+## 1. 先确认普通书写正常
 
-先安装并验证 OpenTabletDriver，再添加本插件。请按设备型号查看
-[OTD 兼容性列表](https://opentabletdriver.net/Tablets)和
-[Windows 安装指南](https://opentabletdriver.net/Wiki/Install/Windows)。
-截至 2026-10-15，官方 Windows 指南要求 .NET 8 Desktop Runtime x64；
-这与本插件源码的 net6.0 编译目标是不同层面的依赖。
+本插件需要 OpenTabletDriver，本机使用 0.6.7。先确保数位板普通输入、压感和笔键可用，再加小范围映射。
 
-Install and verify OpenTabletDriver before adding this plugin. Follow its
-Windows guide for runtime and device-specific requirements; don't assume
-every tablet requires the same driver steps.
+OneNote 工作流使用 Windows Ink Absolute Mode；按上游 [WindowsInk 指南](https://github.com/X9VoiD/VoiDPlugins/wiki/WindowsInk)配置 WindowsInk、所需 VMulti 和 Pen Tip 绑定。Precision Control 的 ZIP 不含 OTD、WindowsInk、VMulti 或运行时。无需为本插件改写 Wacom 原厂映射配置。
 
-在 OneNote 中书写，作者使用 **Windows Ink Absolute Mode**。请参考
-[WindowsInk 上游安装说明](https://github.com/X9VoiD/VoiDPlugins/wiki/WindowsInk)
-安装 WindowsInk 插件及其所需的 VMulti 驱动，并配置 Pen Tip 绑定。
-先确认普通笔输入、压感和笔键正常，再继续。
+Verify ordinary tablet input first. Configure your output mode and its prerequisites separately.
 
-For the author's OneNote workflow, configure **Windows Ink Absolute Mode**,
-its VMulti prerequisite, and the Pen Tip binding following the upstream guide.
-Verify writing, pressure, and pen buttons before adding precision mapping.
-This package does not install WindowsInk, VMulti, OTD, or .NET.
+## 2. 安装或升级插件
 
-## 2. 安装 Precision Control / Install the plugin
+2026-10-22 核对的公开 Latest 下载为 v1.0.0；当前 1.6.0 源码需要自行构建或使用相同版本的维护者安装包。
 
-截至 2026-10-15，公开 Release 为 1.0.0；双旋钮需要 **1.1.2**。
-新版发布前，请从[源码构建](DEVELOPMENT.md)或使用维护者提供的对应版本 ZIP。
+1. 退出 OTD 界面及后台 Daemon。
+2. 备份实际数据目录中的 settings.json 和整个 Precision Control 插件文件夹。
+3. 把安装包 plugin/ 中的 PrecisionControl.dll 与 metadata.json 覆盖到已有插件目录。首次安装可建立 %LOCALAPPDATA%/OpenTabletDriver/Plugins/Precision Control。
+4. 保持只有一份该 DLL；不要复制 OTD 自身的依赖 DLL。
+5. 启动 OTD，在 Filters 添加并启用 Precision Control (TingAlex Enhanced)，保存并应用。
 
-The public release checked on 2026-10-15 is 1.0.0. Dual-dial movement needs
-1.1.2; build it or use a matching ZIP supplied by the maintainer.
+便携/自定义数据目录以实际位置为准。升级时显示名称会调整，配置属性 ID 保持稳定。
 
-1. 退出 OTD 界面和后台进程 / Exit the OTD UI and daemon.
-2. 备份 / Back up `%LOCALAPPDATA%\OpenTabletDriver\settings.json` and your existing Precision Control plugin directory.
-3. 从 ZIP 中的 `plugin` 文件夹复制 `PrecisionControl.dll` 和 `metadata.json`，放入已有的 Precision Control 插件目录。首次安装可使用 / Copy those two files into the existing plugin directory, or for a first install use:
-   `%LOCALAPPDATA%\OpenTabletDriver\Plugins\Precision Control (TingAlex Enhanced)`.
-4. 不要同时保留两份该插件 DLL，也不要复制 OTD 自己的依赖 DLL / Do not keep duplicate plugin copies or copy OTD's own dependency DLLs.
-5. 重启 OTD，在 Filters 添加并启用 **Precision Control (TingAlex Enhanced)**，保存并应用 / Restart OTD, add and enable the enhanced filter, then save and apply.
+1.6.0 不加载隐藏的页面拖移字段，旧的双击/滚动/防抖参数不会开启页面输入。普通笔键映射功能继续使用 EnablePenNavigation 与 EnablePenDrag。
 
-如果你的 OTD 使用便携或自定义数据目录，请使用实际的插件目录。
-For portable/custom OTD data directories, use their actual plugin location.
+## 3. 推荐起始设置
 
-## 3. 推荐起始设置 / Suggested starting settings
-
-以下是工作流建议，不会自动覆盖你现有配置。尤其要手动选择
-**Pointer Anchored**：1.1.2 为兼容旧行为，代码默认仍是 Legacy。
-
-These are starting suggestions, not an imported full-device profile.
-Explicitly choose **Pointer Anchored**: 1.1.2 still defaults to Legacy for
-backward compatibility.
-
-| 界面字段 / UI field | 建议 / Suggestion | 用途 / Meaning |
+| 设置 | 建议 | 作用 |
 | --- | --- | --- |
-| 01 映射区域 · 缩放比例 | 0.25 | Width and height are each about one quarter of the display; smaller values give finer movement |
-| 02 双旋钮 · 水平步长 | 40 px | Horizontal distance per dial tick |
-| 02 双旋钮 · 竖直步长 | 40 px | Vertical distance; adjust to your handwriting line spacing |
-| 03 边框外观 · 显示边框 | On | Visible outline only; does not dim the page |
-| 03 边框外观 · 颜色 | #000000 | Black |
-| 03 边框外观 · 不透明度 | 0.4 | 40% opacity |
-| 03 边框外观 · 线宽 | 2 | Border thickness in pixels |
-| 06 进阶定位 · 映射方式 | Pointer Anchored | Map the tablet/output coordinates proportionally into the frame |
-| 06 进阶定位 · 初始位置来源 | Last Active Pointer | Use whichever moved most recently: pen or mouse |
-| 06 进阶定位 · 锚点横向 / 竖向位置 | 10% / 10% | Place the starting pointer near the frame's top-left; 50%/50% centers it |
+| 01 书写范围 · 坐标映射方式 | Pointer Anchored | 原输出坐标按比例进入整个小框 |
+| 01 书写范围 · 缩放比例 | 0.25 | 宽高各约为原输出的四分之一 |
+| 02 初始位置 · 参考指针来源 | Last Active Pointer | 使用最近活动的笔或鼠标 |
+| 02 初始位置 · 横向/竖向位置 | 10% / 10% | 参考指针靠近框的左上角；50%/50% 为中心 |
+| 03 旋钮移动 · 水平/竖直步长 | 40 / 40 | 每次旋钮触发移动的屏幕像素 |
+| 05 边框外观 | 黑色、0.4、2 px | 看见映射范围，不压暗文档 |
 
-修改后保存、应用，并重新启用映射区。步长是屏幕像素，不是毫米或文档行数；
-更换屏幕缩放、OneNote 缩放或字大小后，可能需要重新调整。
+代码默认映射方式仍为 Screen Relative (Legacy)，用于兼容旧配置。主动选择 Pointer Anchored 后，重新启用映射；Scale、初始位置的修改也在下一次启用时生效。以上建议不会自动覆盖旧配置。
 
-Save/apply changes and reactivate the area. Steps are screen pixels, not
-millimeters or document lines. Retune after changing display or app zoom.
+## 4. 旋钮移动映射框
 
-## 4. 双旋钮绑定 / Bind the two dials
+在 Bindings 的两个旋钮上选择 Precision Control Move Area (Dial)：
 
-在 Bindings 的两个旋钮设置中，给四个旋转方向选择
-**Precision Control Move Area (Dial)**，然后设置 `Direction`：
-
-| 旋钮 / Dial | 顺时针 / Clockwise | 逆时针 / Counterclockwise |
+| 旋钮 | 顺时针 | 逆时针 |
 | --- | --- | --- |
-| 1：水平 / horizontal | Right | Left |
-| 2：竖直 / vertical | Down | Up |
+| 水平旋钮 | Right | Left |
+| 竖直旋钮 | Down | Up |
 
-Wacom PTK-670 每圈 24 格，可使用 15° 触发阈值。其他型号请按设备报告方式配置，
-不要直接套用 PTK-670 的阈值。若方向不合习惯，交换对应旋钮的两个 Direction。
+本机 PTK-670 使用 15° 触发阈值。其他设备按实际报告方式配置，不照搬型号阈值。方向不合习惯时交换同一旋钮的两项 Direction。
 
-PTK-670 has 24 detents per turn, corresponding to 15-degree thresholds.
-Use device-appropriate thresholds for other models. Swap directions to reverse a dial.
+步长是屏幕像素，不是文档行数。抬笔后移动，框尺寸保持；映射未启用、正在书写或已捕获笔键拖框时忽略旋钮，不补执行。
 
-## 5. 实际验证 / Try the workflow
+## 5. 第三笔键控制映射
 
-1. 在 OneNote 中先确认能正常写字 / Verify ordinary writing.
-2. 按 Ctrl+Alt+Shift+P，确认框出现，笔映射变小 / Toggle the area.
-3. 抬起笔尖，分别转动两个旋钮，确认页面不动、框按对应方向移动 / Lift the tip and test both dials.
-4. 写一行、抬笔、下移框，把手移回原来的舒适位置继续 / Write, shift the area, and reuse your preferred hand position.
-5. 隐藏映射区再旋转，确认没有框被创建；重新启用也不会补执行 / Verify inactive ticks are ignored.
-6. 试用触控板移动页面。若笔悬停时手势失效，先抬离感应区 / Test touchpad gestures, with the pen out of range if necessary.
+第 04 组的两个开关独立，默认均关闭；需要报告中有第三笔键，并将其普通 Binding 留空。
 
-## 快捷键与升级说明 / Shortcuts and upgrade notes
-
-- `Ctrl+Alt+Shift+P`：显示/隐藏 / Show or hide mapping.
-- `Ctrl+Alt+Shift+R`：在鼠标处显示或重建 / Show or reposition at the current mouse location.
-- 以上主键和公共修饰键可在设置页修改 / Main keys and shared modifiers are configurable.
-- 1.1.2 隐藏了按键平移的配置项，但仍启用“公共修饰键 + 方向键”，每次移动框宽/高的 20%。
-  旧版自定义按键、步长和禁用状态保留在配置文件中，但此版本不会加载这些隐藏字段。
-  Keyboard nudges remain active with built-in arrow keys and 20% steps.
-  Previously saved custom nudge keys, distances, or disabled state are not
-  loaded while these fields are hidden. This is a known migration limitation.
-
-## 常见问题 / Troubleshooting
-
-| 问题 / Symptom | 检查 / Check |
+| 选项/动作 | 结果 |
 | --- | --- |
-| 旋钮没反应 / Dials do nothing | Enable the filter and area; lift the tip; verify both wheel bindings and thresholds |
-| 笔能动但不能写 / Pointer moves, no ink | Check WindowsInk output mode, VMulti, Pen Tip binding, and app ink mode |
-| 看不到框 / No frame | Enable 显示边框; check opacity; reposition with Ctrl+Alt+Shift+R |
-| 框跑出屏幕 / Area goes off-screen | This version permits it; use reposition to bring it back |
-| 触控板在悬停时失效 / Touchpad suppressed during hover | Lift the pen out of range; the plugin cannot guarantee a workaround |
-| 快捷键没反应 / Shortcut fails | Check OTD logs for key conflicts; choose different shared modifiers/main keys |
-| 插件不出现 / Plugin missing | Verify version and folder, remove duplicate DLL copies, restart both UI and daemon, inspect logs |
+| 开启“短按切换映射”，悬空按下并在 300 ms 内松开 | 立即启用/退出小范围映射；不等待双击 |
+| 长按后只在空中移动 | 不拖页，松开也不切换映射 |
+| 开启“按住贴板拖框”，先按住第三键再落笔滑动 | 移动当前映射框，压力被屏蔽 |
+| 继续按住并抬笔、换位、再落笔 | 继续拖框，悬空移动不拖框 |
+| 松键时仍贴板 | 等松键与抬笔后，下一笔恢复书写 |
 
-停用或卸载：先从 Filters 移除本滤镜，并清除旋钮上的本插件绑定，保存配置。
-退出界面和后台后，移除对应插件文件夹。回退版本时，可恢复已备份的 DLL 和配置。
+短按时长上限可设 150–800 ms，默认 300。悬空小幅晃动不取消短按；贴板/长按/取消不触发短按。已有笔画中才按第三键，不截断原笔画；完成后先松键、抬笔，再操作。
 
-To uninstall, remove the filter and its dial bindings, save, then exit OTD
-and remove the plugin folder. To roll back, restore the backed-up plugin and
-configuration with OTD stopped.
+拖框移动倍率只影响框的位移，和书写 Scale、旋钮步长分开。此处拖的是映射框，文档导航仍交给触控板。
+
+## 6. 快捷键和边框
+
+默认 Ctrl+Alt+Shift+P 切换小范围与原输出映射；Ctrl+Alt+Shift+R 在当前鼠标处启用或重定位映射。第 06 组设置主键/开关，第 07 组选择共同修饰键。
+
+参考指针来源用于普通启用；鼠标重定位始终参考当前鼠标。Pointer Anchored 的框内指针百分比共同决定放置关系。
+
+“显示轮廓”只控制视觉，不关闭小范围。若要退出小范围，使用映射开关。当前 Toggle 在落笔时也被允许，建议抬笔使用；重定位和方向移动保留书写保护。
+
+内置“公共修饰键 + 方向键”每次平移框宽/高的 20%。这些微移参数继续隐藏并使用代码默认值，旧 JSON 中相应自定义值不会加载；本版未扩展其设置入口。
+
+## 7. 验证自己的工作流
+
+先在空白测试页启用小框，确认笔输入进入框内；旋钮或贴板拖框后，后续笔输入对应新位置，页面没有移动。短按退出后确认恢复原输出范围，再次短按启用。
+
+关闭轮廓后仍应保留小范围笔映射。拖框结束先松键并抬笔，确认下一笔正常。需要浏览页面时将笔移出感应区，再使用触控板。
+
+自动测试不覆盖全部真实设备/应用；[页面拖移实验](EXPERIMENTAL-PAGE-PAN.md)当前关闭且不在设置页出现。
+
+## 8. 常见问题与回退
+
+| 问题 | 检查 |
+| --- | --- |
+| 旋钮没反应 | 映射是否启用、是否抬笔、四个方向的 Binding 与触发阈值 |
+| 第三键没反应 | 对应开关是否开启、普通 Binding 是否留空、报告是否实际有第三键 |
+| 能移动却不能写 | 输出模式、WindowsInk/VMulti、Pen Tip 绑定、应用书写模式 |
+| 看不到框 | 显示轮廓、颜色/不透明度，或用鼠标重定位找回框 |
+| 框跑出屏幕 | 当前允许越界；用重定位恢复 |
+| 快捷键无效 | OTD 日志中的冲突、功能开关及修饰键组合 |
+| 笔悬停时触控板不响应 | 先将笔移出感应区；当前接受这一使用顺序 |
+| 旧配置中的拖页开关不起作用 | 1.6.0 已隐藏并关闭页面实验，改由触控板导航 |
+| 插件加载失败 | 版本、重复 DLL、实际数据目录，重启 UI/Daemon 后查看日志 |
+
+回退时退出 UI/Daemon，恢复备份插件及配置，再启动原 OTD。卸载时先移除 Filters 中的滤镜及其旋钮 Binding，保存后退出 OTD，再移除插件文件夹。

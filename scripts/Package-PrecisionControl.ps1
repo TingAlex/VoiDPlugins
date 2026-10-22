@@ -43,7 +43,7 @@ try {
     [ordered]@{
         Name = 'Precision Control (TingAlex Enhanced)'
         Owner = 'TingAlex'
-        Description = 'Movable handwriting area with independent horizontal and vertical tablet dials'
+        Description = 'Precision handwriting mapping with dial movement, third-button mapping controls and a click-through border'
         PluginVersion = $version
         SupportedDriverVersion = '0.6.7.0'
         RepositoryUrl = 'https://github.com/TingAlex/VoiDPlugins'
@@ -60,6 +60,9 @@ try {
     # Include tracked source, not local probes, logs, settings, or build output.
     $files = @(git -c core.quotepath=false ls-files)
     if ($LASTEXITCODE -ne 0) { throw 'Cannot enumerate source files.' }
+    # Include newly added development code, without local tools, logs or build output.
+    $files += @(git -c core.quotepath=false ls-files --others --exclude-standard -- src tests)
+    if ($LASTEXITCODE -ne 0) { throw 'Cannot enumerate new source files.' }
     # Include newly prepared public docs/script even before the first commit.
     $files += @('README.zh-CN.md')
     $files += @(Get-ChildItem (Join-Path $repo 'docs'),$PSScriptRoot -File -Recurse |

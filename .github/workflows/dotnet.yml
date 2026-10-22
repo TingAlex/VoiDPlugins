@@ -19,14 +19,14 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - uses: actions/checkout@master
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       with:
         submodules: recursive
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@main
+      uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
       with:
-        dotnet-version: '6.0'
+        dotnet-version: '6.0.x'
 
     - name: Build
       env:
@@ -34,7 +34,7 @@ jobs:
         plugin: ${{ matrix.plugin }}
       run: dotnet publish ./src/$path/$plugin --configuration Release --framework net6.0 -o ./build/$plugin
 
-    - uses: actions/upload-artifact@main
+    - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
       with:
         name: ${{ matrix.plugin }}
         path: |
@@ -49,14 +49,14 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@master
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       with:
         submodules: recursive
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@main
+      uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
       with:
-        dotnet-version: '6.0'
+        dotnet-version: '6.0.x'
 
     - name: Test PrecisionControl
       run: dotnet test ./tests/PrecisionControl.Tests/PrecisionControl.Tests.csproj --configuration Release
@@ -65,14 +65,14 @@ jobs:
     runs-on: windows-latest
 
     steps:
-    - uses: actions/checkout@master
+    - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
       with:
         submodules: recursive
 
     - name: Setup .NET
-      uses: actions/setup-dotnet@main
+      uses: actions/setup-dotnet@67a3573c9a986a3f9c594539f4ab511d57bb3ce9 # v4
       with:
-        dotnet-version: '6.0'
+        dotnet-version: '6.0.x'
 
     - name: Test WindowsInk
       run: dotnet test ./tests/WindowsInk.Tests/WindowsInk.Tests.csproj --configuration Release

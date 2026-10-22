@@ -38,7 +38,7 @@ namespace VoiDPlugins.Filter
     }
 
     [PluginName("Precision Control (TingAlex Enhanced)")]
-    public class PrecisionControl : IPositionedPipelineElement<IDeviceReport>, IDisposable
+    public partial class PrecisionControl : IPositionedPipelineElement<IDeviceReport>, IDisposable
     {
         public const string ScreenRelativeMode = "Screen Relative (Legacy)";
         public const string PointerAnchoredMode = "Pointer Anchored";
@@ -61,55 +61,6 @@ namespace VoiDPlugins.Filter
 
         public event Action<IDeviceReport>? Emit;
 
-        [ToolTip("控制映射框宽高相对屏幕的比例。0.25 表示宽高各为屏幕的 25%；越小越精细。修改后重新启用映射框。")]
-        [SliderProperty("01 映射区域 · 缩放比例", 0.0f, 10f, 0.3f), DefaultPropertyValue(0.3f)]
-        public float Scale { get; set; }
-
-        [ToolTip("旋钮 1 每格左右移动的距离，范围 1–1000 像素，默认 40。仅移动现有框；没有框或正在落笔时忽略旋转。")]
-        [SliderProperty("02 双旋钮 · 水平步长（像素/格）", 1f, 1000f, 1f), DefaultPropertyValue(40f)]
-        public float HorizontalDialStep { get; set; } = 40f;
-
-        [ToolTip("旋钮 2 每格上下移动的距离，范围 1–1000 像素，默认 40。抬笔或笔离开感应区后仍可移动；不改变框大小。")]
-        [SliderProperty("02 双旋钮 · 竖直步长（像素/格）", 1f, 1000f, 1f), DefaultPropertyValue(40f)]
-        public float VerticalDialStep { get; set; } = 40f;
-
-        [ToolTip("只控制边框可见性，不关闭精确映射。边框可穿透点击，不遮挡操作。")]
-        [BooleanProperty("03 边框外观 · 显示边框", "显示映射范围的轮廓")]
-        [DefaultPropertyValue(true)]
-        public bool ShowBorder { get; set; } = true;
-
-        [ToolTip("输入 #RRGGBB，例如 #000000 黑色、#FFFFFF 白色。默认黑色。")]
-        [Property("03 边框外观 · 颜色"), DefaultPropertyValue(BorderColorParser.DefaultColor)]
-        public string? BorderColor { get; set; } = BorderColorParser.DefaultColor;
-
-        [ToolTip("范围 0.05–1；0.4 表示 40% 不透明，数值越大越明显。")]
-        [SliderProperty("03 边框外观 · 不透明度", 0.05f, 1.0f, 0.05f), DefaultPropertyValue(0.4f)]
-        public float BorderOpacity { get; set; } = 0.4f;
-
-        [ToolTip("边框线条的粗细，建议 1–6 像素；默认 2。")]
-        [SliderProperty("03 边框外观 · 线宽（像素）", 1.0f, 6.0f, 1.0f), DefaultPropertyValue(2.0f)]
-        public float BorderThickness { get; set; } = 2.0f;
-
-        [ToolTip("使用下方主键和第 05 组公共修饰键组合，显示或隐藏映射框。默认 Ctrl+Alt+Shift+P。")]
-        [BooleanProperty("04 快捷键 · 显示/隐藏开关", "启用显示/隐藏快捷键")]
-        [DefaultPropertyValue(true)]
-        public bool EnableGlobalHotkey { get; set; } = true;
-
-        [ToolTip("默认 P。与第 05 组勾选的 Ctrl、Alt、Shift、Windows 键一起按下。")]
-        [Property("04 快捷键 · 显示/隐藏主键"), PropertyValidated(nameof(ValidGlobalHotkeyKeys))]
-        [DefaultPropertyValue("P")]
-        public string? GlobalHotkeyKey { get; set; } = "P";
-
-        [ToolTip("将框重新放到当前鼠标位置；没有框时会创建。默认 Ctrl+Alt+Shift+R，书写期间不执行。")]
-        [BooleanProperty("04 快捷键 · 鼠标定位开关", "启用鼠标定位快捷键")]
-        [DefaultPropertyValue(true)]
-        public bool EnableRepositionHotkey { get; set; } = true;
-
-        [ToolTip("默认 R。与公共修饰键一起按下，将映射框定位到鼠标处。")]
-        [Property("04 快捷键 · 鼠标定位主键"), PropertyValidated(nameof(ValidGlobalHotkeyKeys))]
-        [DefaultPropertyValue("R")]
-        public string? RepositionHotkeyKey { get; set; } = "R";
-
         // Hidden from the generated settings UI; retain the existing shortcut defaults.
         public bool EnableNudgeHotkeys { get; set; } = true;
 
@@ -124,40 +75,6 @@ namespace VoiDPlugins.Filter
         public float HorizontalNudgePercent { get; set; } = 20f;
 
         public float VerticalNudgePercent { get; set; } = 20f;
-
-        [ToolTip("对显示/隐藏、鼠标定位、方向平移这三类快捷键共同生效。")]
-        [BooleanProperty("05 公共修饰键 · Ctrl", "组合键包含 Ctrl"), DefaultPropertyValue(true)]
-        public bool HotkeyCtrl { get; set; } = true;
-
-        [ToolTip("勾选后，触发上述快捷键时还必须按住 Alt。")]
-        [BooleanProperty("05 公共修饰键 · Alt", "组合键包含 Alt"), DefaultPropertyValue(true)]
-        public bool HotkeyAlt { get; set; } = true;
-
-        [ToolTip("勾选后，触发上述快捷键时还必须按住 Shift。")]
-        [BooleanProperty("05 公共修饰键 · Shift", "组合键包含 Shift"), DefaultPropertyValue(true)]
-        public bool HotkeyShift { get; set; } = true;
-
-        [ToolTip("勾选后，触发上述快捷键时还必须按住 Windows 键；默认不勾选。")]
-        [BooleanProperty("05 公共修饰键 · Windows", "组合键包含 Windows"), DefaultPropertyValue(false)]
-        public bool HotkeyWindows { get; set; }
-
-        [ToolTip("Pointer Anchored：整个数位板按比例映射到框内，适合旋钮移动。Screen Relative (Legacy)：旧版相对位移方式。更改后重新启用框。")]
-        [Property("06 进阶定位 · 映射方式"), PropertyValidated(nameof(ValidPositioningModes))]
-        [DefaultPropertyValue(ScreenRelativeMode)]
-        public string? PositioningMode { get; set; } = ScreenRelativeMode;
-
-        [ToolTip("Last Active Pointer：最近活动的笔或鼠标；Last Pen Position：上次笔位置；Current Mouse Position：当前鼠标位置。只影响启用时的位置。")]
-        [Property("06 进阶定位 · 初始位置来源"), PropertyValidated(nameof(ValidActivationAnchorSources))]
-        [DefaultPropertyValue(LastActivePointerAnchor)]
-        public string? ActivationAnchorSource { get; set; } = LastActivePointerAnchor;
-
-        [ToolTip("Pointer Anchored 模式下，初始指针在框内的横向位置：0 为左边，50 为中间，100 为右边。更改后重新启用框。")]
-        [SliderProperty("06 进阶定位 · 锚点横向位置（%）", 0f, 100f, 1f), DefaultPropertyValue(10f)]
-        public float PointerPositionXPercent { get; set; } = 10f;
-
-        [ToolTip("Pointer Anchored 模式下，初始指针在框内的竖向位置：0 为顶边，50 为中间，100 为底边。更改后重新启用框。")]
-        [SliderProperty("06 进阶定位 · 锚点竖向位置（%）", 0f, 100f, 1f), DefaultPropertyValue(10f)]
-        public float PointerPositionYPercent { get; set; } = 10f;
 
         [TabletReference]
         public TabletReference? Tablet { get; set; }
@@ -175,6 +92,20 @@ namespace VoiDPlugins.Filter
             PrecisionControlCoordinator.Register(this);
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 PrecisionControlGlobalHotkeyManager.Register(this);
+            if (EnablePenNavigation && !EnablePenPageNavigation)
+                Log.Write(nameof(PrecisionControl), "Third-button mapping controls enabled; experimental page navigation is disabled and hidden.", LogLevel.Info);
+            else if (EnablePenNavigation && EnablePenDoubleTapPagePan)
+                Log.Write(nameof(PrecisionControl),
+                    $"Pen navigation enabled; double-tap toggles contact page pan; interval: {PenDoubleTapIntervalMilliseconds} ms; hover hold disabled; direct API available: {PenDirectPan.IsSupported}.",
+                    PenDirectPan.IsSupported ? LogLevel.Info : LogLevel.Warning);
+            else if (EnablePenNavigation)
+                Log.Write(nameof(PrecisionControl),
+                    $"Pen navigation enabled; short tap toggles mapping, hover-scroll API available: {PenPageScroller.IsAvailable}, hold delay: {PenNavigationHoldMilliseconds} ms.",
+                    PenPageScroller.IsAvailable ? LogLevel.Info : LogLevel.Warning);
+            if (EnablePenNavigation && EnablePenPageNavigation && PenScrollMode == DirectTouchPanMode)
+                Log.Write(nameof(PrecisionControl),
+                    $"Direct page pan selected; API exports available: {PenDirectPan.IsSupported}. Application panning and cancellation still require verification.",
+                    PenDirectPan.IsSupported ? LogLevel.Info : LogLevel.Warning);
         }
 
         public void Consume(IDeviceReport value)
@@ -182,7 +113,10 @@ namespace VoiDPlugins.Filter
             if (value is OutOfRangeReport)
             {
                 lock (_stateLock)
+                {
                     _isWriting = false;
+                    ResetPenDrag(preservePageMode: true);
+                }
             }
 
             if (value is ITabletReport report)
@@ -190,6 +124,7 @@ namespace VoiDPlugins.Filter
                 lock (_stateLock)
                 {
                     var rawPosition = report.Position;
+                    var wasWriting = _isWriting;
                     _isWriting = report.Pressure > 0;
                     _lastRawPenPosition = rawPosition;
                     _hasLastRawPenPosition = true;
@@ -206,16 +141,12 @@ namespace VoiDPlugins.Filter
                     while (_pendingActions.TryDequeue(out var action))
                         ApplyAction(action, rawPosition);
 
-                    if (_isActive)
-                    {
-                        report.Position = _pointerRelativeActive
-                            ? PrecisionPositionCalculator.MapOutputAreaToBounds(
-                                rawPosition,
-                                _outputArea,
-                                _precisionBounds)
-                            : _activationAnchor +
-                                ((rawPosition - _startingPoint) * Scale);
-                    }
+                    var suppressPenInput = EnablePenNavigation || _penNavigationPhase != PenNavigationPhase.Idle || PenContactNavigationCaptured
+                        ? HandlePenNavigation(report, rawPosition, wasWriting)
+                        : HandlePenDrag(report, rawPosition, wasWriting);
+                    report.Position = suppressPenInput
+                        ? _penDragCursorPosition
+                        : MapPenPosition(rawPosition);
 
                     RecordPenCursorPosition(report.Position);
                 }
@@ -235,10 +166,10 @@ namespace VoiDPlugins.Filter
             lock (_stateLock)
             {
                 if (action == PrecisionControlAction.Reposition &&
-                    _isWriting)
+                    (_isWriting || PenDragBlocksMovement))
                     return false;
                 if (IsNudgeAction(action) &&
-                    (!_isActive || _isWriting))
+                    (!_isActive || _isWriting || PenDragBlocksMovement))
                     return false;
 
                 var currentPosition = _hasLastRawPenPosition
@@ -259,7 +190,7 @@ namespace VoiDPlugins.Filter
             lock (_stateLock)
             {
                 // Never queue dial input: inactive/stroke-time ticks must not replay later.
-                if (!_isActive || _isWriting)
+                if (!_isActive || _isWriting || PenDragBlocksMovement)
                     return;
                 var step = direction is "Left" or "Right"
                     ? HorizontalDialStep : VerticalDialStep;
@@ -278,6 +209,12 @@ namespace VoiDPlugins.Filter
 
         private void ApplyAction(PrecisionControlAction action, Vector2 currentPosition)
         {
+            // Bound actions must follow the same exclusion as hotkeys/dials.
+            // Discard them now; never replay movement after the drag ends.
+            if (PenDragBlocksMovement &&
+                (action == PrecisionControlAction.Reposition || IsNudgeAction(action)))
+                return;
+
             switch (action)
             {
                 case PrecisionControlAction.Toggle:
@@ -286,6 +223,7 @@ namespace VoiDPlugins.Filter
                         ActivateAt(currentPosition);
                     else
                     {
+                        CancelPenDrag();
                         _overlay?.Hide();
                     }
                     break;
@@ -295,6 +233,7 @@ namespace VoiDPlugins.Filter
                     break;
                 case PrecisionControlAction.Deactivate:
                     _isActive = false;
+                    CancelPenDrag();
                     _overlay?.Hide();
                     break;
                 case PrecisionControlAction.Reposition:
@@ -316,6 +255,7 @@ namespace VoiDPlugins.Filter
             Vector2 currentPosition,
             Vector2? anchorOverride = null)
         {
+            CancelPenDrag();
             _activationAnchor = anchorOverride ??
                 ResolveActivationAnchor(currentPosition);
             _startingPoint = _hasLastRawPenPosition
@@ -493,6 +433,8 @@ namespace VoiDPlugins.Filter
 
         public void Dispose()
         {
+            lock (_stateLock)
+                ResetPenDrag();
             PrecisionControlGlobalHotkeyManager.Unregister(this);
             PrecisionControlCoordinator.Unregister(this);
             _overlay?.Dispose();

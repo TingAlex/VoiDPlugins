@@ -2,108 +2,69 @@
 
 **Move your writing area. Keep your page in place.**
 
-[简体中文](README.zh-CN.md) · [Setup guide](docs/SETUP.md) · [Changelog](CHANGELOG.md) · [Build from source](docs/DEVELOPMENT.md)
+[简体中文](README.zh-CN.md) · [Install](docs/SETUP.md) · [Settings reference](docs/SETTINGS.md) · [Changelog](CHANGELOG.md) · [Build](docs/DEVELOPMENT.md)
 
-An **OpenTabletDriver plugin for handwriting on Windows**. Map your pen tablet
-to a smaller area on the screen, then move that area with two tablet dials.
-Use your touchpad to navigate the document when you want to move the page.
+An OpenTabletDriver plugin for handwriting on Windows. Map the tablet to a smaller screen area, then move that area between strokes using dials, pen button 3 or keyboard shortcuts. The document stays in place; subsequent pen input uses the new mapping.
 
-Developed and used in **OneNote with a Wacom PTK-670**, this workflow is useful
-for handwritten notes, document annotations, and writing beside references
-you want to keep in view.
+The workflow comes from Wacom PTK-670 and OneNote use: write a line, lift, shift the mapping, and return your hand to a preferred position. Use the physical touchpad when you want to navigate the document.
 
-## Why move the writing area?
+## Version and downloads
 
-A small mapping gives you finer control on a large display. But as you write
-across or down the page, a fixed mapping can leave your hand working near
-the edge of the tablet. Precision Control lets you shift the mapping between
-strokes and return your hand to a preferred writing band.
+Source version **1.6.0** on [agent/global-hotkey-precision-control](https://github.com/TingAlex/VoiDPlugins/tree/agent/global-hotkey-precision-control).
 
-- **Keep the document still.** Move the frame and pen mapping while existing
-  text, diagrams, and references stay in place.
-- **Reuse a comfortable writing position.** Shift the area down after a line,
-  return your hand to the same band on the tablet, and continue.
-- **Place the frame predictably.** In `Pointer Anchored` mode, specify where
-  the activation point sits inside the frame.
-- **Keep the surrounding page visible.** A thin, translucent, click-through
-  border marks the area without dimming the rest of the screen.
-- **Tune each dial independently.** Small steps for line-by-line writing;
-  larger steps for moving to another part of the page.
+Checked on 2026-10-22: the public Latest asset is still **v1.0.0**, which predates the later dial, pen-button and settings updates. [Build the current source](docs/DEVELOPMENT.md) or use a matching maintainer-supplied package. Do not confuse the source version with an older [release download](https://github.com/TingAlex/VoiDPlugins/releases).
 
-Comfort and reduced interruption describe the author's experience, not
-measured claims about fatigue, writing speed, or suitability for every user.
+## What each control changes
 
-## One page, two kinds of movement
-
-| What you want to move | What you use | What changes |
-| --- | --- | --- |
-| The document | Normal touchpad gestures | The application's page position |
-| The writing area | Tablet dial 1 / dial 2 | The frame and mapping move horizontally / vertically |
-| The area to a new starting point | Reposition shortcut | The area appears at the current mouse location |
-
-Write a line, lift the tip, turn the vertical dial, return your hand to a
-comfortable band, and continue. Use the touchpad when you want to navigate
-elsewhere in the document.
-
-The plugin does not implement touchpad scrolling or change OneNote's
-scrolling. Some Windows devices suppress touchpad input while the pen is in
-range; you may need to lift it out of sensing range to use touchpad gestures.
-
-## Version and requirements
-
-Source version: **1.1.2** on
-[`agent/global-hotkey-precision-control`](https://github.com/TingAlex/VoiDPlugins/tree/agent/global-hotkey-precision-control).
-As checked on 2026-10-15, the public [latest release](https://github.com/TingAlex/VoiDPlugins/releases)
-is **1.0.0 and does not include dual-dial movement**. Build from source until
-a matching release asset is published.
-
-| Component | Status |
+| Control | Result |
 | --- | --- |
-| Windows | Enhanced border and shortcuts use Windows APIs |
-| OpenTabletDriver | Required; tested with 0.6.7 |
-| Tablet | Author-tested: Wacom PTK-670; other models need verification |
-| Two independent dials | OTD must expose both for this two-axis workflow |
-| OneNote / Windows Ink | Author uses Windows Ink Absolute Mode; configure its prerequisites separately |
-| Touchpad | Optional; useful for document navigation |
-| Other apps, DPI settings, multiple monitors | Further compatibility testing needed |
+| Physical touchpad | Move the application's document |
+| Bound horizontal/vertical dials | Move the existing writing mapping, preserving size |
+| Hold button 3 and slide in contact, when enabled | Move the mapping; lift to clutch |
+| Tap button 3, when enabled | Toggle precision/original output mapping |
+| Ctrl + Alt + Shift + P | Toggle precision mapping and its border |
+| Ctrl + Alt + Shift + R | Enable or reposition the mapping at the mouse |
 
-This is an add-on, not a standalone driver or an official Wacom/Microsoft
-product. Start with the [installation and configuration guide](docs/SETUP.md).
+Pen-button features are off by default and require button 3 to be unbound in ordinary bindings. Dial bindings are configured separately. Active-stroke or inactive-mapping dial input is discarded, with no later replay.
 
-## Controls
+Hiding the border alone leaves the mapping active. Exiting precision mapping restores the original output range. Mapping scale does not change OneNote zoom.
 
-| Control | Default action |
+## Settings
+
+The Chinese settings page has hover explanations and seven numbered groups:
+
+| Group | Purpose |
 | --- | --- |
-| Ctrl + Alt + Shift + P | Show / hide precision mapping |
-| Ctrl + Alt + Shift + R | Show or reposition at the current mouse position |
-| Dial 1 clockwise / counterclockwise | Right / left, after binding |
-| Dial 2 clockwise / counterclockwise | Down / up, after binding |
-| Horizontal / vertical dial step | 40 pixels per tick; independently adjustable from 1 to 1000 |
+| 01 Writing range | Scale and coordinate mapping method |
+| 02 Initial position | Reference pointer and its position inside the frame |
+| 03 Dial movement | Independent horizontal/vertical pixel steps |
+| 04 Pen buttons | Tap toggle, tap duration, contact mapping drag and gain |
+| 05 Border appearance | Visibility, color, opacity and width |
+| 06 Keyboard shortcuts | Mapping toggle and mouse reposition |
+| 07 Shared modifiers | Ctrl / Alt / Shift / Windows |
 
-Dial movement starts from the current area and preserves its size. Inactive
-mode and active strokes discard dial ticks without replaying them later.
-Movement works with the pen out of range. The mapping updates on the next pen
-report without synthesizing an immediate cursor move.
+[The field reference](docs/SETTINGS.md) includes property IDs, defaults and conditions.
 
-The settings UI uses Chinese labels and hover help; the English setup guide
-provides a field reference. Keyboard nudge settings are hidden in 1.1.2, but
-their built-in shortcuts remain active. Read the upgrade notes in the guide.
+Suggested starting values: Pointer Anchored, scale 0.25, dial steps 40 pixels and opacity 0.4. Screen Relative (Legacy) remains the code default for compatibility; select Pointer Anchored explicitly.
 
-## Feedback and project status
+## Retained page-pan experiment
 
-Next priorities: a real-device demo, a versioned plugin download, a fresh-PC
-installation test, and more device reports. See the
-[release-readiness plan](docs/RELEASE-PLAN.zh-CN.md).
+The source includes double-tap contact page panning, stationary touch release and adjustable jitter suppression. The local user reported it usable, then chose to keep document navigation on the touchpad.
 
-As checked on 2026-10-15, Issues are disabled on this fork. Enabling a feedback
-channel is a release task. Reports should include OTD/plugin/Windows versions,
-tablet model, output mode, app, monitor scaling, and reproduction steps.
+In **1.6.0 page navigation is disabled by default and its settings are hidden**. Old experimental JSON values cannot enable it. The implementation and tests remain available to developers; mapping tap/drag controls remain exposed. See [experimental page navigation](docs/EXPERIMENTAL-PAGE-PAN.md).
 
-## Credits and license
+## Requirements and verification
 
-Based on Precision Control in [X9VoiD/VoiDPlugins](https://github.com/X9VoiD/VoiDPlugins)
-and the [OpenTabletDriver](https://opentabletdriver.net/) plugin ecosystem.
-This fork retains the upstream modules; this handwriting workflow focuses on
-Precision Control. See the [other modules](docs/OTHER-PLUGINS.md).
+OpenTabletDriver is required; the local workflow uses 0.6.7, PTK-670 and Windows Ink Absolute Mode. Configure WindowsInk, its VMulti prerequisite and the Pen Tip binding separately. This package installs none of those dependencies.
 
-Distributed under the repository's [GNU GPL v3 license](LICENSE).
+Enhanced borders and global hotkeys use Windows APIs. Other tablets, apps, mixed DPI and multiple monitors need their own checks. If pen proximity suppresses a physical touchpad, move the pen out of range before touchpad navigation.
+
+The Precision Control suite has **191 tests** for mapping, input isolation, defaults and retained experimental behavior. Test doubles do not establish universal device support. Comfort claims describe the author's experience.
+
+See the [setup guide](docs/SETUP.md) and [release status](docs/RELEASE-PLAN.zh-CN.md). Issues were disabled on this fork when checked on 2026-10-22; feedback should include versions, tablet, output mode, DPI and reproducible steps without private note content.
+
+## Credits
+
+Based on [X9VoiD/VoiDPlugins](https://github.com/X9VoiD/VoiDPlugins) and the [OpenTabletDriver](https://opentabletdriver.net/) plugin ecosystem. The fork retains [other upstream modules](docs/OTHER-PLUGINS.md); the focused ZIP contains Precision Control only.
+
+Distributed under [GNU GPL v3](LICENSE).

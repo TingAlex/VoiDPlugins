@@ -7,7 +7,7 @@ using Xunit;
 
 namespace PrecisionControl.Tests
 {
-    public sealed class PrecisionControlTests
+    public sealed partial class PrecisionControlTests
     {
         [Fact]
         public void GlobalHotkeyWorksWhenPenIsOutOfRange()
