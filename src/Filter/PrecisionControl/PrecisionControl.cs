@@ -38,7 +38,7 @@ namespace VoiDPlugins.Filter
     }
 
     [PluginName("Precision Control (TingAlex Enhanced)")]
-    public class PrecisionControl : IPositionedPipelineElement<IDeviceReport>, IDisposable
+    public partial class PrecisionControl : IPositionedPipelineElement<IDeviceReport>, IDisposable
     {
         public const string ScreenRelativeMode = "Screen Relative (Legacy)";
         public const string PointerAnchoredMode = "Pointer Anchored";
@@ -61,88 +61,19 @@ namespace VoiDPlugins.Filter
 
         public event Action<IDeviceReport>? Emit;
 
-        [SliderProperty("Precision Multiplier", 0.0f, 10f, 0.3f), DefaultPropertyValue(0.3f)]
-        public float Scale { get; set; }
-
-        [Property("Precision Area Positioning"), PropertyValidated(nameof(ValidPositioningModes))]
-        [DefaultPropertyValue(ScreenRelativeMode)]
-        public string? PositioningMode { get; set; } = ScreenRelativeMode;
-
-        [Property("Activation Anchor Source"), PropertyValidated(nameof(ValidActivationAnchorSources))]
-        [DefaultPropertyValue(LastActivePointerAnchor)]
-        public string? ActivationAnchorSource { get; set; } = LastActivePointerAnchor;
-
-        [SliderProperty("Anchor Position X (%)", 0f, 100f, 1f), DefaultPropertyValue(10f)]
-        public float PointerPositionXPercent { get; set; } = 10f;
-
-        [SliderProperty("Anchor Position Y (%)", 0f, 100f, 1f), DefaultPropertyValue(10f)]
-        public float PointerPositionYPercent { get; set; } = 10f;
-
-        [BooleanProperty("Show Precision Border", "Show a translucent, click-through border around the precision area.")]
-        [DefaultPropertyValue(true)]
-        public bool ShowBorder { get; set; } = true;
-
-        [SliderProperty("Border Thickness", 1.0f, 6.0f, 1.0f), DefaultPropertyValue(2.0f)]
-        public float BorderThickness { get; set; } = 2.0f;
-
-        [Property("Border Color (#RRGGBB)"), DefaultPropertyValue(BorderColorParser.DefaultColor)]
-        public string? BorderColor { get; set; } = BorderColorParser.DefaultColor;
-
-        [SliderProperty("Border Opacity", 0.05f, 1.0f, 0.05f), DefaultPropertyValue(0.4f)]
-        public float BorderOpacity { get; set; } = 0.4f;
-
-        [BooleanProperty("Enable Global Hotkey", "Let a Windows shortcut toggle precision at any time.")]
-        [DefaultPropertyValue(true)]
-        public bool EnableGlobalHotkey { get; set; } = true;
-
-        [Property("Global Hotkey Key"), PropertyValidated(nameof(ValidGlobalHotkeyKeys))]
-        [DefaultPropertyValue("P")]
-        public string? GlobalHotkeyKey { get; set; } = "P";
-
-        [BooleanProperty("Hotkey Ctrl", "Require the Ctrl key."), DefaultPropertyValue(true)]
-        public bool HotkeyCtrl { get; set; } = true;
-
-        [BooleanProperty("Hotkey Alt", "Require the Alt key."), DefaultPropertyValue(true)]
-        public bool HotkeyAlt { get; set; } = true;
-
-        [BooleanProperty("Hotkey Shift", "Require the Shift key."), DefaultPropertyValue(true)]
-        public bool HotkeyShift { get; set; } = true;
-
-        [BooleanProperty("Hotkey Windows", "Require the Windows key."), DefaultPropertyValue(false)]
-        public bool HotkeyWindows { get; set; }
-
-        [BooleanProperty("Enable Reposition Hotkey", "Show or move the precision area directly to the current mouse position.")]
-        [DefaultPropertyValue(true)]
-        public bool EnableRepositionHotkey { get; set; } = true;
-
-        [Property("Reposition Hotkey Key"), PropertyValidated(nameof(ValidGlobalHotkeyKeys))]
-        [DefaultPropertyValue("R")]
-        public string? RepositionHotkeyKey { get; set; } = "R";
-
-        [BooleanProperty("Enable Nudge Hotkeys", "Move the active precision area with global shortcuts while the pen is not writing.")]
-        [DefaultPropertyValue(true)]
+        // Hidden from the generated settings UI; retain the existing shortcut defaults.
         public bool EnableNudgeHotkeys { get; set; } = true;
 
-        [Property("Nudge Up Key"), PropertyValidated(nameof(ValidGlobalHotkeyKeys))]
-        [DefaultPropertyValue("Up")]
         public string? NudgeUpKey { get; set; } = "Up";
 
-        [Property("Nudge Down Key"), PropertyValidated(nameof(ValidGlobalHotkeyKeys))]
-        [DefaultPropertyValue("Down")]
         public string? NudgeDownKey { get; set; } = "Down";
 
-        [Property("Nudge Left Key"), PropertyValidated(nameof(ValidGlobalHotkeyKeys))]
-        [DefaultPropertyValue("Left")]
         public string? NudgeLeftKey { get; set; } = "Left";
 
-        [Property("Nudge Right Key"), PropertyValidated(nameof(ValidGlobalHotkeyKeys))]
-        [DefaultPropertyValue("Right")]
         public string? NudgeRightKey { get; set; } = "Right";
 
-        [SliderProperty("Horizontal Nudge (%)", 1f, 100f, 1f), DefaultPropertyValue(20f)]
         public float HorizontalNudgePercent { get; set; } = 20f;
 
-        [SliderProperty("Vertical Nudge (%)", 1f, 100f, 1f), DefaultPropertyValue(20f)]
         public float VerticalNudgePercent { get; set; } = 20f;
 
         [TabletReference]
@@ -161,6 +92,20 @@ namespace VoiDPlugins.Filter
             PrecisionControlCoordinator.Register(this);
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 PrecisionControlGlobalHotkeyManager.Register(this);
+            if (EnablePenNavigation && !EnablePenPageNavigation)
+                Log.Write(nameof(PrecisionControl), "Third-button mapping controls enabled; experimental page navigation is disabled and hidden.", LogLevel.Info);
+            else if (EnablePenNavigation && EnablePenDoubleTapPagePan)
+                Log.Write(nameof(PrecisionControl),
+                    $"Pen navigation enabled; double-tap toggles contact page pan; interval: {PenDoubleTapIntervalMilliseconds} ms; hover hold disabled; direct API available: {PenDirectPan.IsSupported}.",
+                    PenDirectPan.IsSupported ? LogLevel.Info : LogLevel.Warning);
+            else if (EnablePenNavigation)
+                Log.Write(nameof(PrecisionControl),
+                    $"Pen navigation enabled; short tap toggles mapping, hover-scroll API available: {PenPageScroller.IsAvailable}, hold delay: {PenNavigationHoldMilliseconds} ms.",
+                    PenPageScroller.IsAvailable ? LogLevel.Info : LogLevel.Warning);
+            if (EnablePenNavigation && EnablePenPageNavigation && PenScrollMode == DirectTouchPanMode)
+                Log.Write(nameof(PrecisionControl),
+                    $"Direct page pan selected; API exports available: {PenDirectPan.IsSupported}. Application panning and cancellation still require verification.",
+                    PenDirectPan.IsSupported ? LogLevel.Info : LogLevel.Warning);
         }
 
         public void Consume(IDeviceReport value)
@@ -168,7 +113,10 @@ namespace VoiDPlugins.Filter
             if (value is OutOfRangeReport)
             {
                 lock (_stateLock)
+                {
                     _isWriting = false;
+                    ResetPenDrag(preservePageMode: true);
+                }
             }
 
             if (value is ITabletReport report)
@@ -176,6 +124,7 @@ namespace VoiDPlugins.Filter
                 lock (_stateLock)
                 {
                     var rawPosition = report.Position;
+                    var wasWriting = _isWriting;
                     _isWriting = report.Pressure > 0;
                     _lastRawPenPosition = rawPosition;
                     _hasLastRawPenPosition = true;
@@ -192,16 +141,12 @@ namespace VoiDPlugins.Filter
                     while (_pendingActions.TryDequeue(out var action))
                         ApplyAction(action, rawPosition);
 
-                    if (_isActive)
-                    {
-                        report.Position = _pointerRelativeActive
-                            ? PrecisionPositionCalculator.MapOutputAreaToBounds(
-                                rawPosition,
-                                _outputArea,
-                                _precisionBounds)
-                            : _activationAnchor +
-                                ((rawPosition - _startingPoint) * Scale);
-                    }
+                    var suppressPenInput = EnablePenNavigation || _penNavigationPhase != PenNavigationPhase.Idle || PenContactNavigationCaptured
+                        ? HandlePenNavigation(report, rawPosition, wasWriting)
+                        : HandlePenDrag(report, rawPosition, wasWriting);
+                    report.Position = suppressPenInput
+                        ? _penDragCursorPosition
+                        : MapPenPosition(rawPosition);
 
                     RecordPenCursorPosition(report.Position);
                 }
@@ -221,10 +166,10 @@ namespace VoiDPlugins.Filter
             lock (_stateLock)
             {
                 if (action == PrecisionControlAction.Reposition &&
-                    _isWriting)
+                    (_isWriting || PenDragBlocksMovement))
                     return false;
                 if (IsNudgeAction(action) &&
-                    (!_isActive || _isWriting))
+                    (!_isActive || _isWriting || PenDragBlocksMovement))
                     return false;
 
                 var currentPosition = _hasLastRawPenPosition
@@ -240,8 +185,36 @@ namespace VoiDPlugins.Filter
             return QueueGlobalAction(PrecisionControlAction.Toggle);
         }
 
+        internal void MoveFromDial(string direction)
+        {
+            lock (_stateLock)
+            {
+                // Never queue dial input: inactive/stroke-time ticks must not replay later.
+                if (!_isActive || _isWriting || PenDragBlocksMovement)
+                    return;
+                var step = direction is "Left" or "Right"
+                    ? HorizontalDialStep : VerticalDialStep;
+                if (!float.IsFinite(step) || step <= 0)
+                    return;
+                var distance = (int)Math.Round(Math.Clamp(step, 1f, 1000f));
+                switch (direction)
+                {
+                    case "Left": TranslateArea(-distance, 0); break;
+                    case "Right": TranslateArea(distance, 0); break;
+                    case "Up": TranslateArea(0, -distance); break;
+                    case "Down": TranslateArea(0, distance); break;
+                }
+            }
+        }
+
         private void ApplyAction(PrecisionControlAction action, Vector2 currentPosition)
         {
+            // Bound actions must follow the same exclusion as hotkeys/dials.
+            // Discard them now; never replay movement after the drag ends.
+            if (PenDragBlocksMovement &&
+                (action == PrecisionControlAction.Reposition || IsNudgeAction(action)))
+                return;
+
             switch (action)
             {
                 case PrecisionControlAction.Toggle:
@@ -250,6 +223,7 @@ namespace VoiDPlugins.Filter
                         ActivateAt(currentPosition);
                     else
                     {
+                        CancelPenDrag();
                         _overlay?.Hide();
                     }
                     break;
@@ -259,6 +233,7 @@ namespace VoiDPlugins.Filter
                     break;
                 case PrecisionControlAction.Deactivate:
                     _isActive = false;
+                    CancelPenDrag();
                     _overlay?.Hide();
                     break;
                 case PrecisionControlAction.Reposition:
@@ -280,6 +255,7 @@ namespace VoiDPlugins.Filter
             Vector2 currentPosition,
             Vector2? anchorOverride = null)
         {
+            CancelPenDrag();
             _activationAnchor = anchorOverride ??
                 ResolveActivationAnchor(currentPosition);
             _startingPoint = _hasLastRawPenPosition
@@ -394,6 +370,11 @@ namespace VoiDPlugins.Filter
                 _ => 0
             };
 
+            TranslateArea(deltaX, deltaY);
+        }
+
+        private void TranslateArea(int deltaX, int deltaY)
+        {
             _precisionBounds = _precisionBounds.Translate(deltaX, deltaY);
 
             if (!_pointerRelativeActive)
@@ -452,6 +433,8 @@ namespace VoiDPlugins.Filter
 
         public void Dispose()
         {
+            lock (_stateLock)
+                ResetPenDrag();
             PrecisionControlGlobalHotkeyManager.Unregister(this);
             PrecisionControlCoordinator.Unregister(this);
             _overlay?.Dispose();
@@ -548,6 +531,16 @@ namespace VoiDPlugins.Filter
             return TryQueueGlobalAction(
                 PrecisionControlAction.Toggle,
                 gesture);
+        }
+
+        public static void MoveFromDial(TabletReference tablet, string direction)
+        {
+            lock (_syncRoot)
+            {
+                var filter = _filters.FirstOrDefault(candidate =>
+                    ReferenceEquals(candidate.Tablet, tablet));
+                filter?.MoveFromDial(direction);
+            }
         }
 
         public static bool TryQueueGlobalAction(

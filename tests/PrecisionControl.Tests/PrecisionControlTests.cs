@@ -7,7 +7,7 @@ using Xunit;
 
 namespace PrecisionControl.Tests
 {
-    public sealed class PrecisionControlTests
+    public sealed partial class PrecisionControlTests
     {
         [Fact]
         public void GlobalHotkeyWorksWhenPenIsOutOfRange()
@@ -616,6 +616,86 @@ namespace PrecisionControl.Tests
                 gesture,
                 out var action));
             Assert.Equal(PrecisionControlAction.Reposition, action);
+        }
+
+        [Theory]
+        [InlineData("Left", -37, 0)]
+        [InlineData("Right", 37, 0)]
+        [InlineData("Up", 0, -59)]
+        [InlineData("Down", 0, 59)]
+        public void DialMovesExistingAreaImmediatelyAndUpdatesPenMapping(string direction, int dx, int dy)
+        {
+            using var filter = CreateFilter(out var tablet, out var overlay);
+            filter.PositioningMode = VoiDPlugins.Filter.PrecisionControl.PointerAnchoredMode;
+            filter.HorizontalDialStep = 37;
+            filter.VerticalDialStep = 59;
+            filter.EnableNudgeHotkeys = false;
+            filter.Consume(new TestTabletReport(new Vector2(1000, 800)));
+            filter.QueueGlobalToggle();
+            var before = overlay.Bounds;
+            var emitted = Vector2.Zero;
+            filter.Emit += r => { if (r is ITabletReport t) emitted = t.Position; };
+            filter.Consume(new TestTabletReport(new Vector2(1000, 800)));
+            var penBefore = emitted;
+            filter.Consume(new OutOfRangeReport(Array.Empty<byte>()));
+            var binding = new PrecisionControlMoveBinding { Direction = direction };
+            for (var i = 0; i < 3; i++)
+            {
+                binding.Press(tablet, new OutOfRangeReport(Array.Empty<byte>()));
+                binding.Release(tablet, new OutOfRangeReport(Array.Empty<byte>()));
+            }
+            AssertBounds(overlay.Bounds, before.Left + 3 * dx, before.Top + 3 * dy, before.Width, before.Height);
+            Assert.Equal(penBefore, emitted);
+            filter.Consume(new TestTabletReport(new Vector2(1000, 800)));
+            Assert.Equal(penBefore + new Vector2(3 * dx, 3 * dy), emitted);
+        }
+
+        [Fact]
+        public void InactiveDialInputIsDiscardedAndDoesNotReplayOnActivation()
+        {
+            using var filter = CreateFilter(out var tablet, out var overlay);
+            var binding = new PrecisionControlMoveBinding();
+            binding.Press(tablet, new OutOfRangeReport(Array.Empty<byte>()));
+            Assert.Equal(0, overlay.ShowCount);
+            filter.QueueGlobalToggle();
+            var before = overlay.Bounds;
+            filter.Consume(new TestTabletReport(Vector2.Zero));
+            Assert.Equal(before, overlay.Bounds);
+            filter.QueueGlobalToggle();
+            binding.Press(tablet, new OutOfRangeReport(Array.Empty<byte>()));
+            Assert.Equal(1, overlay.ShowCount);
+        }
+
+        [Fact]
+        public void DialIgnoresOtherTabletsAndDiscardsTicksDuringWriting()
+        {
+            using var filter = CreateFilter(out var tablet, out var overlay);
+            filter.QueueGlobalToggle();
+            var before = overlay.Bounds;
+            var binding = new PrecisionControlMoveBinding();
+            binding.Press(new TabletReference(), new TestTabletReport(Vector2.Zero));
+            Assert.Equal(before, overlay.Bounds);
+            filter.Consume(new TestTabletReport(Vector2.Zero, 512));
+            binding.Press(tablet, new TestTabletReport(Vector2.Zero));
+            filter.Consume(new TestTabletReport(Vector2.Zero));
+            Assert.Equal(before, overlay.Bounds);
+            binding.Press(tablet, new TestTabletReport(Vector2.Zero));
+            Assert.Equal(before.Left + 40, overlay.Bounds.Left);
+        }
+
+        [Theory]
+        [InlineData(float.NaN)]
+        [InlineData(float.PositiveInfinity)]
+        [InlineData(-10f)]
+        [InlineData(0f)]
+        public void InvalidDialStepDoesNotMoveArea(float step)
+        {
+            using var filter = CreateFilter(out var tablet, out var overlay);
+            filter.QueueGlobalToggle();
+            var before = overlay.Bounds;
+            filter.HorizontalDialStep = step;
+            new PrecisionControlMoveBinding().Press(tablet, new TestTabletReport(Vector2.Zero));
+            Assert.Equal(before, overlay.Bounds);
         }
 
         private static VoiDPlugins.Filter.PrecisionControl CreateFilter(

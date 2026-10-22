@@ -1,178 +1,70 @@
-# VoiDPlugins — TingAlex Enhanced [![.NET](https://github.com/TingAlex/VoiDPlugins/actions/workflows/dotnet.yml/badge.svg?branch=agent%2Fglobal-hotkey-precision-control)](https://github.com/TingAlex/VoiDPlugins/actions/workflows/dotnet.yml)
+# Precision Control — TingAlex Enhanced
 
-This fork of [VoiDPlugins](https://github.com/X9VoiD/VoiDPlugins) adds a
-Windows-focused version of Precision Control for
-[OpenTabletDriver](https://github.com/InfinityGhost/OpenTabletDriver). It is
-designed for handwriting and drawing workflows driven by a precision touchpad:
-show, reposition, and nudge a visible precision area without reaching for the
-tablet buttons.
+**Move your writing area. Keep your page in place.**
 
-The enhanced plugin is displayed as **Precision Control (TingAlex Enhanced)**,
-so it can be distinguished from the upstream filter in OpenTabletDriver.
+[简体中文](README.zh-CN.md) · [Install](docs/SETUP.md) · [Settings reference](docs/SETTINGS.md) · [Changelog](CHANGELOG.md) · [Build](docs/DEVELOPMENT.md)
 
-## Precision Control v1.0.0 quick start
+An OpenTabletDriver plugin for handwriting on Windows. Map the tablet to a smaller screen area, then move that area between strokes using dials, pen button 3 or keyboard shortcuts. The document stays in place; subsequent pen input uses the new mapping.
 
-### Requirements
+The workflow comes from Wacom PTK-670 and OneNote use: write a line, lift, shift the mapping, and return your hand to a preferred position. Use the physical touchpad when you want to navigate the document.
 
-- Windows 10 or Windows 11
-- OpenTabletDriver 0.6.x (tested with 0.6.7)
-- A Windows Precision Touchpad is optional, but recommended for gesture control
+## Version and downloads
 
-### Installation
+Source version **1.6.0** on [agent/global-hotkey-precision-control](https://github.com/TingAlex/VoiDPlugins/tree/agent/global-hotkey-precision-control).
 
-1. Download `PrecisionControl-v1.0.0.zip` from the
-   [latest release](https://github.com/TingAlex/VoiDPlugins/releases/latest).
-2. Exit OpenTabletDriver, including its daemon.
-3. Extract `PrecisionControl.dll` into a dedicated plugin directory such as
-   `%LOCALAPPDATA%\OpenTabletDriver\Plugins\Precision Control (TingAlex Enhanced)`.
-4. Start OpenTabletDriver, add **Precision Control (TingAlex Enhanced)** under
-   `Filters`, and save the configuration.
+Checked on 2026-10-22: the public Latest asset is still **v1.0.0**, which predates the later dial, pen-button and settings updates. [Build the current source](docs/DEVELOPMENT.md) or use a matching maintainer-supplied package. Do not confuse the source version with an older [release download](https://github.com/TingAlex/VoiDPlugins/releases).
 
-If an earlier review build is installed, replace its `PrecisionControl.dll`
-while OpenTabletDriver is stopped. Keeping a backup of the plugin directory and
-`%LOCALAPPDATA%\OpenTabletDriver\settings.json` is recommended before upgrading.
+## What each control changes
 
-### Default shortcuts
+| Control | Result |
+| --- | --- |
+| Physical touchpad | Move the application's document |
+| Bound horizontal/vertical dials | Move the existing writing mapping, preserving size |
+| Hold button 3 and slide in contact, when enabled | Move the mapping; lift to clutch |
+| Tap button 3, when enabled | Toggle precision/original output mapping |
+| Ctrl + Alt + Shift + P | Toggle precision mapping and its border |
+| Ctrl + Alt + Shift + R | Enable or reposition the mapping at the mouse |
 
-All global actions share the modifier selection configured in the filter. The
-default modifiers are `Ctrl+Alt+Shift`.
+Pen-button features are off by default and require button 3 to be unbound in ordinary bindings. Dial bindings are configured separately. Active-stroke or inactive-mapping dial input is discarded, with no later replay.
 
-| Action | Default shortcut | Suggested touchpad gesture | Behavior |
-| --- | --- | --- | --- |
-| Show or hide | `Ctrl+Alt+Shift+P` | Three-finger tap | Toggles the precision area at the selected activation anchor. |
-| Reposition | `Ctrl+Alt+Shift+R` | Four-finger tap | Shows a hidden area or immediately rebuilds the visible area at the current mouse position. |
-| Nudge up | `Ctrl+Alt+Shift+Up` | Three-finger swipe up | Moves the visible area upward by the configured vertical step. |
-| Nudge down | `Ctrl+Alt+Shift+Down` | Three-finger swipe down | Moves the visible area downward by the configured vertical step. |
-| Nudge left | `Ctrl+Alt+Shift+Left` | Three-finger swipe left | Moves the visible area left by the configured horizontal step. |
-| Nudge right | `Ctrl+Alt+Shift+Right` | Three-finger swipe right | Moves the visible area right by the configured horizontal step. |
+Hiding the border alone leaves the mapping active. Exiting precision mapping restores the original output range. Mapping scale does not change OneNote zoom.
 
-Open **Windows Settings > Bluetooth & devices > Touchpad > Advanced gestures**
-and assign each gesture to its matching custom shortcut. Repositioning and
-nudging are ignored only while pen pressure is above zero, preventing an
-accidental area move during a stroke. They remain available while the pen is
-hovering or out of range.
+## Settings
 
-# Plugins
+The Chinese settings page has hover explanations and seven numbered groups:
 
-## Experimental
+| Group | Purpose |
+| --- | --- |
+| 01 Writing range | Scale and coordinate mapping method |
+| 02 Initial position | Reference pointer and its position inside the frame |
+| 03 Dial movement | Independent horizontal/vertical pixel steps |
+| 04 Pen buttons | Tap toggle, tap duration, contact mapping drag and gain |
+| 05 Border appearance | Visibility, color, opacity and width |
+| 06 Keyboard shortcuts | Mapping toggle and mouse reposition |
+| 07 Shared modifiers | Ctrl / Alt / Shift / Windows |
 
-### [MeL](https://github.com/X9VoiD/VoiDPlugins/wiki/MeL)
+[The field reference](docs/SETTINGS.md) includes property IDs, defaults and conditions.
 
-      Machine Learning Plugin
+Suggested starting values: Pointer Anchored, scale 0.25, dial steps 40 pixels and opacity 0.4. Screen Relative (Legacy) remains the code default for compatibility; select Pointer Anchored explicitly.
 
-### [Reconstructor](https://github.com/X9VoiD/VoiDPlugins/wiki/Reconstructor)
+## Retained page-pan experiment
 
-      Mathematically perfect "anti-hardware-smoothing"
+The source includes double-tap contact page panning, stationary touch release and adjustable jitter suppression. The local user reported it usable, then chose to keep document navigation on the touchpad.
 
-## Filters
+In **1.6.0 page navigation is disabled by default and its settings are hidden**. Old experimental JSON values cannot enable it. The implementation and tests remain available to developers; mapping tap/drag controls remain exposed. See [experimental page navigation](docs/EXPERIMENTAL-PAGE-PAN.md).
 
-### Precision Control (TingAlex Enhanced)
+## Requirements and verification
 
-      Dynamic sensitivity switching
+OpenTabletDriver is required; the local workflow uses 0.6.7, PTK-670 and Windows Ink Absolute Mode. Configure WindowsInk, its VMulti prerequisite and the Pen Tip binding separately. This package installs none of those dependencies.
 
-#### Unified settings
+Enhanced borders and global hotkeys use Windows APIs. Other tablets, apps, mixed DPI and multiple monitors need their own checks. If pen proximity suppresses a physical touchpad, move the pen out of range before touchpad navigation.
 
-The enhanced filter keeps its precision multiplier, border, and Windows global
-hotkey settings together under `Filters > Precision Control (TingAlex
-Enhanced)`. The hotkey uses `RegisterHotKey`, not a low-level keyboard hook,
-and can toggle precision even when the pen is out of range. The activation
-anchor can come from the last pen position, the current mouse position, or
-whichever pointer moved most recently.
+The Precision Control suite has **191 tests** for mapping, input isolation, defaults and retained experimental behavior. Test doubles do not establish universal device support. Comfort claims describe the author's experience.
 
-The toggle works whether the pen is touching, hovering, or out of range.
-The separate reposition action shows a hidden area at the current Windows
-mouse position or directly rebuilds an already-visible area there without an
-intermediate hide or border flicker.
+See the [setup guide](docs/SETUP.md) and [release status](docs/RELEASE-PLAN.zh-CN.md). Issues were disabled on this fork when checked on 2026-10-22; feedback should include versions, tablet, output mode, DPI and reproducible steps without private note content.
 
-Precision Control also registers `Ctrl+Alt+Shift` plus the four arrow keys for
-moving an active precision area. Map those shortcuts to three-finger swipes in
-Windows. Directional moves are ignored only while pen pressure is above zero;
-hovering and out-of-range pens do not restrict them. Horizontal and vertical
-move distances default to 20% of the precision-area width and height and can be
-configured independently.
+## Credits
 
-#### Precision area positioning
+Based on [X9VoiD/VoiDPlugins](https://github.com/X9VoiD/VoiDPlugins) and the [OpenTabletDriver](https://opentabletdriver.net/) plugin ecosystem. The fork retains [other upstream modules](docs/OTHER-PLUGINS.md); the focused ZIP contains Precision Control only.
 
-`Precision Area Positioning` provides two coordinate modes:
-
-- `Screen Relative (Legacy)` preserves the original behavior. It scales the
-  full monitor area around the activation point, so the pointer keeps the same
-  relative position it had on the monitor.
-- `Pointer Anchored` creates a fixed-size precision area around a configurable
-  activation anchor. `Anchor Position X (%)` and `Anchor Position Y (%)`
-  choose where that anchor sits inside the area. The defaults are 10% from the
-  left and 10% from the top; 50%/50% centers the area on the anchor.
-
-`Activation Anchor Source` selects that anchor:
-
-- `Last Active Pointer` (default) uses whichever moved most recently: the
-  OpenTabletDriver pen cursor or the physical mouse/touchpad cursor.
-- `Last Pen Position` keeps using the last pen cursor, with a mouse fallback
-  before the first pen report.
-- `Current Mouse Position` always uses the Windows mouse cursor, with a pen
-  fallback if the mouse position is unavailable.
-
-The area keeps the exact configured relationship to its anchor. It is not
-shifted back inside a display near an edge, and directional moves may also
-place part of the area off-screen. Moving the area does not synthesize pointer
-movement, so the current pen cursor stays still during the gesture. On the
-next pen report, the full tablet/output area is mapped proportionally into the
-translated precision area: tablet top-left maps to area top-left, center maps
-to center, and bottom-right maps to bottom-right.
-
-When precision mode is active on Windows, the filter displays a thin,
-semi-transparent border around the effective precision area. The border is
-always on top, does not take focus, and lets mouse and pen input pass through.
-Its visibility, `#RRGGBB` color, thickness, and opacity can be configured on
-the enhanced filter. The default is black at 40% opacity.
-
-See Microsoft's
-[touch gesture documentation](https://support.microsoft.com/windows/touch-gestures-for-windows-a9d28305-4818-a5df-4e2b-e5590f850741)
-for Windows Precision Touchpad gesture configuration.
-
-#### Configuration notes
-
-- The reposition key and four nudge keys are independent, but reuse the same
-  Ctrl/Alt/Shift/Windows modifier selection as the toggle key.
-- Windows global shortcuts must be unique. If registration fails, choose a
-  different key or modifier combination and restart OpenTabletDriver.
-- Border color accepts `#RRGGBB`. The default border is black, 2 px thick, at
-  40% opacity.
-- `Pointer Anchored` intentionally allows the precision area to extend beyond
-  a monitor edge so its location remains predictable.
-- To uninstall, stop OpenTabletDriver, remove the enhanced plugin directory,
-  then remove the enhanced filter from the saved configuration if necessary.
-
-See [CHANGELOG.md](CHANGELOG.md) for release history.
-
-## Output Modes
-
-### [WindowsInk](https://github.com/X9VoiD/VoiDPlugins/wiki/WindowsInk)
-
-      Pen pressure support
-      100% compliance to Windows Ink
-      Upto 8192 levels of pressure
-
-#### Touchpad-friendly hover
-
-Enable `Touchpad-friendly hover` on the Windows Ink output mode when Windows
-suppresses precision-touchpad gestures while a pen is in range. Hover movement
-is mirrored through the OS mouse cursor, while contact, pressure, tilt, and pen
-buttons continue to use Windows Ink. This makes touchpad gestures available
-while the pen is hovering, at the cost of native pen-hover semantics until the
-tip touches the tablet.
-
-### [VMultiMode](https://github.com/X9VoiD/VoiDPlugins/wiki/VMultiMode)
-
-      Classic VMulti input emulation
-
-### [TouchEmu](https://github.com/X9VoiD/VoiDPlugins/wiki/TouchEmu)
-
-      Touch input emulation (RawInput incompatible)
-      Natural Scrolling everywhere
-
-## Bindings
-
-### [ScriptRunner](https://github.com/X9VoiD/VoiDPlugins/wiki/ScriptRunner)
-
-      Bind shell commands, scripts or programs to OTD
+Distributed under [GNU GPL v3](LICENSE).
