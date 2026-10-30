@@ -20,7 +20,8 @@ namespace VoiDPlugins.Filter
         private float _penDragSensitivity;
 
         private bool PenDragBlocksMovement => _penDragPhase != PenDragPhase.Idle ||
-            _penNavigationPhase != PenNavigationPhase.Idle || PenContactNavigationCaptured;
+            _penNavigationPhase != PenNavigationPhase.Idle || PenContactNavigationCaptured ||
+            _touchpadDragPhase != TouchpadDragPhase.Idle;
 
         private Vector2 MapPenPosition(Vector2 position)
         {
@@ -35,6 +36,10 @@ namespace VoiDPlugins.Filter
         // _isWriting retains PHYSICAL pressure so existing movement guards stay intact.
         private bool HandlePenDrag(ITabletReport report, Vector2 position, bool wasWriting)
         {
+            // A touchpad drag owns the mapping rectangle while it is active.
+            if (_touchpadDragPhase != TouchpadDragPhase.Idle)
+                return false;
+
             var buttons = report.PenButtons;
             var hasButton = buttons != null && buttons.Length >= 3;
             var buttonDown = hasButton && buttons![2];

@@ -3,6 +3,25 @@
 All notable changes to Precision Control (TingAlex Enhanced) are documented in
 this file.
 
+## [1.7.0] - 2026-10-30
+
+- Add a three-finger precision-touchpad drag that moves the real screen mapping
+  rectangle, reusing the existing `TranslateArea` path and the fixed aspect/scale.
+  Contacts are captured in the background with Raw Input (usage `0x0D/0x05`,
+  `RIDEV_INPUTSINK | RIDEV_DEVNOTIFY`), so it works while OneNote is foreground and
+  never steals focus, moves the mouse or scrolls the page.
+- Start/stop rules: the gesture begins only after a small travel threshold, ends on
+  contact-count change, contact-ID change, lift, 40 ms frame gap, pen contact,
+  pen-button drag, or mapping deactivation. The rectangle is never replayed after a
+  gesture; each segment measures displacement from its own baseline.
+- New group 08: `EnableTouchpadDrag` (default off) and `TouchpadDragSensitivity`
+  (0.05-3, default 0.25). Hidden `TouchpadDragFingers` defaults to 3.
+- Contact model and report parsing adapted from emoacht/RawInput.Touchpad and
+  ClementGre/ThreeFingerDragOnWindows (both MIT); original notices retained.
+- 205 Precision Control tests pass, including threshold, finger-count, ID-change,
+  pause, lift, inactive-mapping and invalid-gain coverage. Physical drag feel and
+  OneNote behavior still need user verification.
+
 ## [1.6.0] - 2026-10-22
 
 - Keep document navigation on the physical touchpad by default. Retain pen page

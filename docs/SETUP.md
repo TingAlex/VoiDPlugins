@@ -1,6 +1,6 @@
 # 安装与使用 / Install and use
 
-适用源码版本：**1.6.0**。完整字段解释见 [设置参考](SETTINGS.md)，编译与打包见 [开发指南](DEVELOPMENT.md)。
+适用源码版本：**1.7.0**。完整字段解释见 [设置参考](SETTINGS.md)，编译与打包见 [开发指南](DEVELOPMENT.md)。
 
 ## 1. 先确认普通书写正常
 
@@ -12,7 +12,7 @@ Verify ordinary tablet input first. Configure your output mode and its prerequis
 
 ## 2. 安装或升级插件
 
-2026-10-22 核对的公开 Latest 下载为 v1.0.0；当前 1.6.0 源码需要自行构建或使用相同版本的维护者安装包。
+2026-10-22 核对的公开 Latest 下载为 v1.0.0；当前 1.7.0 源码需要自行构建或使用相同版本的维护者安装包。
 
 1. 退出 OTD 界面及后台 Daemon。
 2. 备份实际数据目录中的 settings.json 和整个 Precision Control 插件文件夹。
@@ -22,7 +22,7 @@ Verify ordinary tablet input first. Configure your output mode and its prerequis
 
 便携/自定义数据目录以实际位置为准。升级时显示名称会调整，配置属性 ID 保持稳定。
 
-1.6.0 不加载隐藏的页面拖移字段，旧的双击/滚动/防抖参数不会开启页面输入。普通笔键映射功能继续使用 EnablePenNavigation 与 EnablePenDrag。
+1.7.0 新增可选的三指触控板拖框（第 08 组，默认关闭），复用小范围映射矩形，不移动鼠标、不滚动页面。1.6.0 起不加载隐藏的页面拖移字段，旧的双击/滚动/防抖参数不会开启页面输入。普通笔键映射功能继续使用 EnablePenNavigation 与 EnablePenDrag。
 
 ## 3. 推荐起始设置
 

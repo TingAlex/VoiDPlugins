@@ -1,6 +1,6 @@
 # 设置参考 / Settings reference
 
-适用版本：**1.6.0**。在 OTD 的 Filters 中选择 Precision Control (TingAlex Enhanced)。界面采用七组编号前缀与悬停解释；下表的 Property ID 是稳定配置键，重命名显示文字不更改旧配置含义。
+适用版本：**1.7.0**。在 OTD 的 Filters 中选择 Precision Control (TingAlex Enhanced)。界面采用八组编号前缀与悬停解释；下表的 Property ID 是稳定配置键，重命名显示文字不更改旧配置含义。
 
 ## 01 书写范围 / Writing range
 
@@ -75,6 +75,15 @@
 | Windows | HotkeyWindows | 关闭 | 开启后还要求按 Windows |
 
 这组修饰键共同用于映射开关、鼠标重定位和内置方向键微移。内置方向键每次移动框宽/高的 20%；微移的独立开关/按键/步长未显示，使用代码默认，旧隐藏自定义值不会加载。
+
+## 08 触控板拖框 / Touchpad drag
+
+| 界面字段 | Property ID | 默认值 | 作用与条件 |
+| --- | --- | --- | --- |
+| 启用三指拖移 | EnableTouchpadDrag | 关闭 | 小范围映射启用、笔离开感应区时，三指在精确触控板上拖动即移动实际映射框；抬指即停，不做惯性或补放 |
+| 移动倍率 | TouchpadDragSensitivity | 0.25 | 0.05–3。1 表示横向划满触控板一次等于移动一个输出区域宽度；0.25 约等于一个映射框宽度 |
+
+需要 Windows 精确触控板（Precision Touchpad）。后台通过 Raw Input 读取触点，不抢焦点、不移动鼠标、不滚动页面；建议把 Windows 三指手势设为无操作，以免同时触发系统动作。参与手指数默认 3，可在配置 JSON 中用 TouchpadDragFingers 改为 2–5。笔接触书写、映射关闭、笔键拖框进行中都会结束或忽略三指拖框。
 
 ## 已保留但未展示的页面实验
 

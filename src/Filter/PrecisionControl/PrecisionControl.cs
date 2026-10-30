@@ -92,6 +92,8 @@ namespace VoiDPlugins.Filter
             PrecisionControlCoordinator.Register(this);
             if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
                 PrecisionControlGlobalHotkeyManager.Register(this);
+            if (EnableTouchpadDrag && RuntimeInformation.IsOSPlatform(OSPlatform.Windows))
+                TouchpadFrameRouter.Register(this);
             if (EnablePenNavigation && !EnablePenPageNavigation)
                 Log.Write(nameof(PrecisionControl), "Third-button mapping controls enabled; experimental page navigation is disabled and hidden.", LogLevel.Info);
             else if (EnablePenNavigation && EnablePenDoubleTapPagePan)
@@ -126,6 +128,8 @@ namespace VoiDPlugins.Filter
                     var rawPosition = report.Position;
                     var wasWriting = _isWriting;
                     _isWriting = report.Pressure > 0;
+                    if (_isWriting && _touchpadDragPhase != TouchpadDragPhase.Idle)
+                        EndTouchpadDrag();
                     _lastRawPenPosition = rawPosition;
                     _hasLastRawPenPosition = true;
 
@@ -224,6 +228,7 @@ namespace VoiDPlugins.Filter
                     else
                     {
                         CancelPenDrag();
+                        ResetTouchpadDrag();
                         _overlay?.Hide();
                     }
                     break;
@@ -234,6 +239,7 @@ namespace VoiDPlugins.Filter
                 case PrecisionControlAction.Deactivate:
                     _isActive = false;
                     CancelPenDrag();
+                    ResetTouchpadDrag();
                     _overlay?.Hide();
                     break;
                 case PrecisionControlAction.Reposition:
@@ -434,7 +440,11 @@ namespace VoiDPlugins.Filter
         public void Dispose()
         {
             lock (_stateLock)
+            {
                 ResetPenDrag();
+                ResetTouchpadDrag();
+            }
+            TouchpadFrameRouter.Unregister(this);
             PrecisionControlGlobalHotkeyManager.Unregister(this);
             PrecisionControlCoordinator.Unregister(this);
             _overlay?.Dispose();

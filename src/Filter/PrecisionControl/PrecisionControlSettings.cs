@@ -106,5 +106,18 @@ namespace VoiDPlugins.Filter
         [ToolTip("勾选后，触发上述快捷键时还必须按住 Windows 键；默认不勾选。")]
         [BooleanProperty("07 组合修饰键 · Windows", "快捷键组合包含 Windows"), DefaultPropertyValue(false)]
         public bool HotkeyWindows { get; set; }
+
+        [ToolTip("用触控板三指拖动直接移动实际屏幕映射矩形。只在小范围映射启用、笔离开感应区时生效；抬指即停，不做惯性或补放。需要 Windows 精确触控板；不移动鼠标、不滚动页面。默认关闭。")]
+        [BooleanProperty("08 触控板拖框 · 启用三指拖移", "三指在触控板上拖动时移动映射框")]
+        [DefaultPropertyValue(false)]
+        public bool EnableTouchpadDrag { get; set; }
+
+        [ToolTip("触控板移动倍率：取值范围 0.05–3，默认 0.25。1 表示在触控板横向划满一次，映射框移动一个输出区域的宽度；0.25 约等于一个映射框宽度。只影响三指拖框，不改书写缩放。")]
+        [SliderProperty("08 触控板拖框 · 移动倍率", 0.05f, 3f, 0.25f), DefaultPropertyValue(0.25f)]
+        public float TouchpadDragSensitivity { get; set; } = 0.25f;
+
+        // Hidden from the generated settings UI; 3 is the requested gesture,
+        // other counts can be set through the profile JSON.
+        public int TouchpadDragFingers { get; set; } = 3;
     }
 }
