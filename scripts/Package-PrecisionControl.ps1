@@ -60,7 +60,7 @@ try {
     # Include tracked source, not local probes, logs, settings, or build output.
     $files = @(git -c core.quotepath=false ls-files)
     if ($LASTEXITCODE -ne 0) { throw 'Cannot enumerate source files.' }
-    # Include newly added development code, without local tools, logs or build output.
+    # Include newly added source; untracked tools/, logs and build output are skipped.
     $files += @(git -c core.quotepath=false ls-files --others --exclude-standard -- src tests)
     if ($LASTEXITCODE -ne 0) { throw 'Cannot enumerate new source files.' }
     # Include newly prepared public docs/script even before the first commit.

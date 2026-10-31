@@ -66,9 +66,24 @@ Optional: -OutputDirectory chooses another output parent. The script builds/test
 - BUILD-INFO.json recording source commit, dirty tracked state and submodule commit.
 - SHA256SUMS.txt for the two ZIP files.
 
-The script does not install or publish. It includes new src/tests development files before commit; local untracked probes, logs and device profiles are excluded. Build release packages from committed source for clear provenance.
+The script does not install or publish. It includes new src/tests development files before commit; untracked local files (logs, device profiles, build output) are excluded, while tracked files under tools/ are copied into the source archive only. Build release packages from committed source for clear provenance.
 
 GitHub's automatic source archive does not expand submodules, so keep the explicit source ZIP with any binary distribution. OTD, WindowsInk, VMulti and their runtimes are not bundled.
+
+## Diagnostic probes
+
+`tools/` keeps development probes that are not part of the plugin package:
+
+- `TouchpadFrameProbe` — reuses the plugin's Raw Input listener and prints
+  precision-touchpad frames (contact count, IDs, coordinates, centroid). Start here
+  when three-finger drag does nothing.
+- `TouchpadPenProbe` — checks whether touchpad events still arrive while the pen
+  hovers, and captures three/four/five-finger global gestures in the foreground.
+- `BleHidAccessProbe` — BLE HID access check for the Magic Trackpad haptics notes.
+
+See [tools/README.md](../tools/README.md) for build commands and how to read the
+output. All three need an interactive desktop session; registration failures there
+are an environment limit, not a plugin defect.
 
 ## Contribution and release checks
 
