@@ -112,9 +112,13 @@ namespace VoiDPlugins.Filter
         [DefaultPropertyValue(false)]
         public bool EnableTouchpadDrag { get; set; }
 
-        [ToolTip("触控板移动倍率：取值范围 0.05–3，默认 0.25。1 表示在触控板横向划满一次，映射框移动一个输出区域的宽度；0.25 约等于一个映射框宽度。只影响三指拖框，不改书写缩放。")]
-        [SliderProperty("08 触控板拖框 · 移动倍率", 0.05f, 3f, 0.25f), DefaultPropertyValue(0.25f)]
+        [ToolTip("触控板移动倍率：取值范围 0.02–5，默认 0.25。1 表示在触控板横向划满一次，映射框移动一个输出区域的宽度；0.25 约等于一个映射框宽度。数值越小越精细，只影响三指拖框，不改书写缩放。")]
+        [SliderProperty("08 触控板拖框 · 移动倍率", 0.02f, 5f, 0.25f), DefaultPropertyValue(0.25f)]
         public float TouchpadDragSensitivity { get; set; } = 0.25f;
+
+        [ToolTip("段落感步长（屏幕像素）：大于 0 时映射框按该像素数一格一格跳动，每格需多推 10% 才切换，避免停在边界时抖动；0 表示连续拖动。只影响三指拖框，不改书写缩放或旋钮步长。默认 0。")]
+        [SliderProperty("08 触控板拖框 · 段落步长（像素，0=连续）", 0f, 500f, 0f), DefaultPropertyValue(0f)]
+        public float TouchpadDragStepPixels { get; set; }
 
         // Hidden from the generated settings UI; 3 is the requested gesture,
         // other counts can be set through the profile JSON.

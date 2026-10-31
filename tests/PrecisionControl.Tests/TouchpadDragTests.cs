@@ -157,7 +157,8 @@ namespace PrecisionControl.Tests
         [Theory]
         [InlineData(float.NaN)]
         [InlineData(0f)]
-        [InlineData(3.5f)]
+        [InlineData(0.01f)]
+        [InlineData(5.5f)]
         public void InvalidTouchpadSensitivityCannotStartDrag(float sensitivity)
         {
             using var filter = PrepareTouchpadDrag(out var overlay);
@@ -167,6 +168,79 @@ namespace PrecisionControl.Tests
             filter.HandleTouchpadFrame(Frame(10, 400));
             filter.HandleTouchpadFrame(Frame(20, 900));
             Assert.Equal(original, overlay.Bounds);
+        }
+
+        [Theory]
+        [InlineData(0.02f, 2)]
+        [InlineData(5f, 469)]
+        public void SensitivityRangeEndpointsAreAccepted(float sensitivity, int expectedDeltaX)
+        {
+            using var filter = PrepareTouchpadDrag(out var overlay);
+            var original = overlay.Bounds;
+            filter.TouchpadDragSensitivity = sensitivity;
+            filter.HandleTouchpadFrame(Frame(0, 0));
+            filter.HandleTouchpadFrame(Frame(10, 100));
+            filter.HandleTouchpadFrame(Frame(20, 200));
+            Assert.Equal(original.Left + expectedDeltaX, overlay.Bounds.Left);
+        }
+
+        [Fact]
+        public void DetentStepMovesInWholeStepsAndIgnoresBoundaryNoise()
+        {
+            using var filter = PrepareTouchpadDrag(out var overlay);
+            var original = overlay.Bounds;
+            filter.TouchpadDragSensitivity = 1f;
+            filter.TouchpadDragStepPixels = 100f;
+
+            filter.HandleTouchpadFrame(Frame(0, 0));
+            filter.HandleTouchpadFrame(Frame(10, 100)); // gesture starts here
+            Assert.Equal(original, overlay.Bounds);
+
+            filter.HandleTouchpadFrame(Frame(20, 150)); // 46.9 px, below half a step
+            Assert.Equal(original.Left, overlay.Bounds.Left);
+
+            filter.HandleTouchpadFrame(Frame(30, 170)); // 65.6 px, first detent
+            Assert.Equal(original.Left + 100, overlay.Bounds.Left);
+
+            filter.HandleTouchpadFrame(Frame(40, 230)); // 121.9 px, still first detent
+            Assert.Equal(original.Left + 100, overlay.Bounds.Left);
+
+            filter.HandleTouchpadFrame(Frame(50, 280)); // 168.8 px, second detent
+            Assert.Equal(original.Left + 200, overlay.Bounds.Left);
+        }
+
+        [Fact]
+        public void DetentStepWorksInNegativeDirection()
+        {
+            using var filter = PrepareTouchpadDrag(out var overlay);
+            var original = overlay.Bounds;
+            filter.TouchpadDragSensitivity = 1f;
+            filter.TouchpadDragStepPixels = 100f;
+
+            filter.HandleTouchpadFrame(Frame(0, 0));
+            filter.HandleTouchpadFrame(Frame(10, 100));
+            filter.HandleTouchpadFrame(Frame(30, 280));
+            Assert.Equal(original.Left + 200, overlay.Bounds.Left);
+
+            filter.HandleTouchpadFrame(Frame(40, 220)); // 112.5 px -> one step back
+            Assert.Equal(original.Left + 100, overlay.Bounds.Left);
+            filter.HandleTouchpadFrame(Frame(50, 120)); // 18.8 px -> zero step
+            Assert.Equal(original.Left, overlay.Bounds.Left);
+        }
+
+        [Theory]
+        [InlineData(float.NaN)]
+        [InlineData(-20f)]
+        public void InvalidDetentStepFallsBackToContinuous(float step)
+        {
+            using var filter = PrepareTouchpadDrag(out var overlay);
+            var original = overlay.Bounds;
+            filter.TouchpadDragSensitivity = 1f;
+            filter.TouchpadDragStepPixels = step;
+            filter.HandleTouchpadFrame(Frame(0, 0));
+            filter.HandleTouchpadFrame(Frame(10, 100));
+            filter.HandleTouchpadFrame(Frame(20, 500));
+            Assert.Equal(original.Left + 375, overlay.Bounds.Left);
         }
 
         [Fact]

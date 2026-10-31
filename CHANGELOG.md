@@ -3,6 +3,16 @@
 All notable changes to Precision Control (TingAlex Enhanced) are documented in
 this file.
 
+## [1.8.0] - 2026-10-31
+
+- Widen the touchpad drag gain range to 0.02-5 (was 0.05-3) so slow precision
+  placement and fast travel are both reachable from the same slider.
+- Add optional detents: new `TouchpadDragStepPixels` (0-500 px, default 0 =
+  continuous). The rectangle moves in whole steps with 10% hysteresis, so a
+  finger resting on a step boundary cannot flicker between two cells.
+- 212 tests pass, including detent quantization in both directions, hysteresis,
+  invalid-step fallback and sensitivity range endpoints.
+
 ## [1.7.0] - 2026-10-30
 
 - Add a three-finger precision-touchpad drag that moves the real screen mapping

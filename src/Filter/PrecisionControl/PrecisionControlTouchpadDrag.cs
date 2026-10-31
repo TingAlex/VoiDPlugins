@@ -102,7 +102,7 @@ namespace VoiDPlugins.Filter
             }
 
             var sensitivity = TouchpadDragSensitivity;
-            if (!float.IsFinite(sensitivity) || sensitivity < 0.05f || sensitivity > 3f)
+            if (!float.IsFinite(sensitivity) || sensitivity < 0.02f || sensitivity > 5f)
             {
                 EndTouchpadDrag();
                 return;
@@ -120,6 +120,18 @@ namespace VoiDPlugins.Filter
             var offsetX = Math.Round((centroid.X - _touchpadStartCentroid.X) * gainX);
             var offsetY = Math.Round((centroid.Y - _touchpadStartCentroid.Y) * gainY);
 
+            // Optional detents: the rectangle moves in whole steps instead of following
+            // the fingers continuously. 10% extra travel is required before a step flips,
+            // so a finger resting on a step boundary cannot rattle between two cells.
+            var step = float.IsFinite(TouchpadDragStepPixels)
+                ? Math.Clamp((double)TouchpadDragStepPixels, 0d, 500d)
+                : 0d;
+            if (step > 0)
+            {
+                offsetX = QuantizeStep(ref _touchpadStepX, offsetX, step);
+                offsetY = QuantizeStep(ref _touchpadStepY, offsetY, step);
+            }
+
             var targetLeft = _touchpadStartBounds.Left + offsetX;
             var targetTop = _touchpadStartBounds.Top + offsetY;
             var deltaX = targetLeft - _precisionBounds.Left;
@@ -135,6 +147,23 @@ namespace VoiDPlugins.Filter
 
             if (deltaX != 0 || deltaY != 0)
                 TranslateArea((int)deltaX, (int)deltaY);
+        }
+
+        private static double QuantizeStep(ref int appliedSteps, double offset, double step)
+        {
+            var desired = (int)Math.Round(offset / step, MidpointRounding.AwayFromZero);
+            if (desired > appliedSteps)
+            {
+                if (offset >= (appliedSteps * step) + (step * 0.6))
+                    appliedSteps = desired;
+            }
+            else if (desired < appliedSteps)
+            {
+                if (offset <= (appliedSteps * step) - (step * 0.6))
+                    appliedSteps = desired;
+            }
+
+            return appliedSteps * step;
         }
 
         private static bool IsSafeTranslation(double deltaX, double deltaY)
@@ -165,6 +194,8 @@ namespace VoiDPlugins.Filter
                 Log.Debug(nameof(PrecisionControl), "Touchpad drag ended.");
             _touchpadDragPhase = TouchpadDragPhase.Idle;
             _touchpadTravel = 0;
+            _touchpadStepX = 0;
+            _touchpadStepY = 0;
         }
 
         private void ResetTouchpadDrag()
@@ -179,6 +210,8 @@ namespace VoiDPlugins.Filter
         private Vector2 _touchpadStartCentroid;
         private OverlayBounds _touchpadStartBounds;
         private float _touchpadTravel;
+        private int _touchpadStepX;
+        private int _touchpadStepY;
         private int[] _touchpadLastIds = Array.Empty<int>();
     }
 
