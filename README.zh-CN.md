@@ -2,7 +2,7 @@
 
 **移动书写区，让页面留在原地。**
 
-[English](README.md) · [安装](docs/SETUP.md) · [设置说明](docs/SETTINGS.md) · [版本记录](CHANGELOG.md) · [构建](docs/DEVELOPMENT.md)
+[English](README.md) · [安装](docs/SETUP.md) · [设置说明](docs/SETTINGS.md) · [触控板拖框](docs/TOUCHPAD-DRAG.zh-CN.md) · [版本记录](CHANGELOG.md) · [构建](docs/DEVELOPMENT.md)
 
 这是面向 Windows 文档手写的 OpenTabletDriver 插件：把数位板映射到屏幕上的小范围，再用旋钮、第三笔键、触控板三指拖移或快捷键移动这个范围。页面内容保持原位，下一笔写进新的屏幕区域。
 
@@ -52,7 +52,7 @@
 | 07 组合修饰键 | 快捷键共用的 Ctrl / Alt / Shift / Windows |
 | 08 触控板拖框 | 三指拖移开关、移动倍率、段落步长与方向锁定 |
 
-每项都有悬停说明。[完整设置表](docs/SETTINGS.md)列出默认值、适用条件与参数之间的关系。
+每项都有悬停说明。[完整设置表](docs/SETTINGS.md)列出默认值、适用条件与参数之间的关系；三指拖框的判定与调参见 [触控板三指拖框](docs/TOUCHPAD-DRAG.zh-CN.md)。
 
 首次使用建议：Pointer Anchored、比例 0.25、旋钮步长 40、边框不透明度 0.4。为兼容旧配置，代码默认映射算法仍是 Screen Relative (Legacy)，需要主动选择 Pointer Anchored。
 

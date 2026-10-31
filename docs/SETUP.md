@@ -22,7 +22,7 @@ Verify ordinary tablet input first. Configure your output mode and its prerequis
 
 便携/自定义数据目录以实际位置为准。升级时显示名称会调整，配置属性 ID 保持稳定。
 
-1.7.0 新增可选的三指触控板拖框（第 08 组，默认关闭），复用小范围映射矩形，不移动鼠标、不滚动页面。1.6.0 起不加载隐藏的页面拖移字段，旧的双击/滚动/防抖参数不会开启页面输入。普通笔键映射功能继续使用 EnablePenNavigation 与 EnablePenDrag。
+1.7.0 新增可选的三指触控板拖框（第 08 组，默认关闭），复用小范围映射矩形，不移动鼠标、不滚动页面；参数与调参见 [触控板三指拖框](TOUCHPAD-DRAG.zh-CN.md)。1.6.0 起不加载隐藏的页面拖移字段，旧的双击/滚动/防抖参数不会开启页面输入。普通笔键映射功能继续使用 EnablePenNavigation 与 EnablePenDrag。
 
 ## 3. 推荐起始设置
 

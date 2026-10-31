@@ -87,7 +87,7 @@
 | 锁轴比例 | TouchpadDragAxisLockRatio | 1.5 | 1–5。主方向位移需达到次方向的多少倍才锁轴；越小越容易锁、斜向越难保留 |
 | 换轴比例（越大越黏） | TouchpadDragAxisReleaseRatio | 2.5 | 1.2–6。已锁定时另一轴位移需超过本轴的倍数才换向；越大越不可能被抖动带偏 |
 
-需要 Windows 精确触控板（Precision Touchpad）。后台通过 Raw Input 读取触点，不抢焦点、不移动鼠标、不滚动页面；建议把 Windows 三指手势设为无操作，以免同时触发系统动作。参与手指数默认 3，可在配置 JSON 中用 TouchpadDragFingers 改为 2–5。笔接触书写、映射关闭、笔键拖框进行中都会结束或忽略三指拖框。
+需要 Windows 精确触控板（Precision Touchpad）。后台通过 Raw Input 读取触点，不抢焦点、不移动鼠标、不滚动页面；建议把 Windows 三指手势设为无操作，以免同时触发系统动作。参与手指数默认 3，可在配置 JSON 中用 TouchpadDragFingers 改为 2–5。笔接触书写、映射关闭、笔键拖框进行中都会结束或忽略三指拖框。判定细节、推荐组合与调参顺序见 [触控板三指拖框](TOUCHPAD-DRAG.zh-CN.md)。
 
 ## 已保留但未展示的页面实验
 

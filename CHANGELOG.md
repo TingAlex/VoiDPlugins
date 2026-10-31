@@ -13,6 +13,8 @@ this file.
   work; switching re-baselines to avoid jumps.
 - 220 tests pass, including dominance lock, diagonal passthrough, axis switching,
   forced axes, unknown-mode fallback and looser lock ratios.
+- Add docs/TOUCHPAD-DRAG.zh-CN.md: gesture model, full parameter reference,
+  tuning recipes, troubleshooting and rollback.
 
 ## [1.8.0] - 2026-10-31
 

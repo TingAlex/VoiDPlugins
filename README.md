@@ -2,7 +2,7 @@
 
 **Move your writing area. Keep your page in place.**
 
-[简体中文](README.zh-CN.md) · [Install](docs/SETUP.md) · [Settings reference](docs/SETTINGS.md) · [Changelog](CHANGELOG.md) · [Build](docs/DEVELOPMENT.md)
+[简体中文](README.zh-CN.md) · [Install](docs/SETUP.md) · [Settings reference](docs/SETTINGS.md) · [Touchpad drag](docs/TOUCHPAD-DRAG.zh-CN.md) · [Changelog](CHANGELOG.md) · [Build](docs/DEVELOPMENT.md)
 
 An OpenTabletDriver plugin for handwriting on Windows. Map the tablet to a smaller screen area, then move that area between strokes using dials, pen button 3, a three-finger touchpad drag or keyboard shortcuts. The document stays in place; subsequent pen input uses the new mapping.
 
@@ -45,7 +45,7 @@ The Chinese settings page has hover explanations and eight numbered groups:
 | 07 Shared modifiers | Ctrl / Alt / Shift / Windows |
 | 08 Touchpad drag | Three-finger toggle, gain, detent step and axis locking |
 
-[The field reference](docs/SETTINGS.md) includes property IDs, defaults and conditions.
+[The field reference](docs/SETTINGS.md) includes property IDs, defaults and conditions. The touchpad gesture model, axis rules and tuning recipes are in [touchpad drag (zh-CN)](docs/TOUCHPAD-DRAG.zh-CN.md).
 
 Suggested starting values: Pointer Anchored, scale 0.25, dial steps 40 pixels and opacity 0.4. Screen Relative (Legacy) remains the code default for compatibility; select Pointer Anchored explicitly.
 
