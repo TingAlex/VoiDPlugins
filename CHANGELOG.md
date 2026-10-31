@@ -3,6 +3,15 @@
 All notable changes to Precision Control (TingAlex Enhanced) are documented in
 this file.
 
+## [1.9.1] - 2026-10-31
+
+- Fix the small jump/flicker when the three fingers lift: every frame's target is
+  now committed one frame later, so the distorted release frame is discarded
+  instead of moving the mapping. Adds at most ~10 ms of lag; a pending target is
+  still committed before an axis switch, and cleared when the gesture ends.
+- 220 tests pass, including a new test that the final uncommitted movement is
+  dropped at lift.
+
 ## [1.9.0] - 2026-10-31
 
 - Add axis control for the touchpad drag, evaluated in raw device units so a

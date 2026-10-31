@@ -10,7 +10,7 @@ The workflow comes from Wacom PTK-670 and OneNote use: write a line, lift, shift
 
 ## Version and downloads
 
-Source version **1.9.0** on [feature/touchpad-three-finger-drag](https://github.com/TingAlex/VoiDPlugins/tree/feature/touchpad-three-finger-drag).
+Source version **1.9.1** on [feature/touchpad-three-finger-drag](https://github.com/TingAlex/VoiDPlugins/tree/feature/touchpad-three-finger-drag).
 
 Checked on 2026-10-22: the public Latest asset is still **v1.0.0**, which predates the later dial, pen-button and settings updates. [Build the current source](docs/DEVELOPMENT.md) or use a matching maintainer-supplied package. Do not confuse the source version with an older [release download](https://github.com/TingAlex/VoiDPlugins/releases).
 

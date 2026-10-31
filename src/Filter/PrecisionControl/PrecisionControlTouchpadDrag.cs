@@ -103,11 +103,16 @@ namespace VoiDPlugins.Filter
                 _touchpadStartBounds = _precisionBounds;
                 _touchpadTravel = 0;
                 _touchpadAxis = TouchpadDragDirection.None;
+                _hasPendingTouchpadTarget = false;
                 Log.Debug(
                     nameof(PrecisionControl),
                     $"Touchpad drag started with {fingerCount} contacts.");
                 return;
             }
+
+            // Commit the previous frame first, so a pending target is never lost when the
+            // current frame switches axis or ends the gesture.
+            ApplyPendingTouchpadTarget();
 
             var sensitivity = TouchpadDragSensitivity;
             if (!float.IsFinite(sensitivity) || sensitivity < 0.02f || sensitivity > 5f)
@@ -148,19 +153,35 @@ namespace VoiDPlugins.Filter
 
             var targetLeft = _touchpadStartBounds.Left + offsetX;
             var targetTop = _touchpadStartBounds.Top + offsetY;
-            var deltaX = targetLeft - _precisionBounds.Left;
-            var deltaY = targetTop - _precisionBounds.Top;
 
-            if (!IsSafeTranslation(deltaX, deltaY) ||
-                targetLeft < int.MinValue || targetLeft > int.MaxValue - (double)_precisionBounds.Width ||
+            if (targetLeft < int.MinValue || targetLeft > int.MaxValue - (double)_precisionBounds.Width ||
                 targetTop < int.MinValue || targetTop > int.MaxValue - (double)_precisionBounds.Height)
             {
                 EndTouchpadDrag();
                 return;
             }
 
+            // Park this frame's target; the next frame (or a switch) commits it. A lift
+            // always ends the gesture before its predecessor is committed, so the
+            // finger-release movement that used to show up as a jump at lift is dropped.
+            _pendingTouchpadLeft = (int)targetLeft;
+            _pendingTouchpadTop = (int)targetTop;
+            _hasPendingTouchpadTarget = true;
+        }
+
+        private void ApplyPendingTouchpadTarget()
+        {
+            if (!_hasPendingTouchpadTarget)
+                return;
+
+            var deltaX = _pendingTouchpadLeft - _precisionBounds.Left;
+            var deltaY = _pendingTouchpadTop - _precisionBounds.Top;
+            _hasPendingTouchpadTarget = false;
+            if (!IsSafeTranslation(deltaX, deltaY))
+                return;
+
             if (deltaX != 0 || deltaY != 0)
-                TranslateArea((int)deltaX, (int)deltaY);
+                TranslateArea(deltaX, deltaY);
         }
 
         private (bool AllowX, bool AllowY) ResolveTouchpadDragAxis(
@@ -238,6 +259,7 @@ namespace VoiDPlugins.Filter
             _touchpadStartBounds = _precisionBounds;
             _touchpadStepX = 0;
             _touchpadStepY = 0;
+            _hasPendingTouchpadTarget = false;
         }
 
         private static double QuantizeStep(ref int appliedSteps, double offset, double step)
@@ -288,6 +310,7 @@ namespace VoiDPlugins.Filter
             _touchpadAxis = TouchpadDragDirection.None;
             _touchpadStepX = 0;
             _touchpadStepY = 0;
+            _hasPendingTouchpadTarget = false;
         }
 
         private void ResetTouchpadDrag()
@@ -303,6 +326,9 @@ namespace VoiDPlugins.Filter
         private OverlayBounds _touchpadStartBounds;
         private float _touchpadTravel;
         private TouchpadDragDirection _touchpadAxis;
+        private bool _hasPendingTouchpadTarget;
+        private int _pendingTouchpadLeft;
+        private int _pendingTouchpadTop;
         private int _touchpadStepX;
         private int _touchpadStepY;
         private int[] _touchpadLastIds = Array.Empty<int>();

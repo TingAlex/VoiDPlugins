@@ -1,6 +1,6 @@
 # 设置参考 / Settings reference
 
-适用版本：**1.9.0**。在 OTD 的 Filters 中选择 Precision Control (TingAlex Enhanced)。界面采用八组编号前缀与悬停解释；下表的 Property ID 是稳定配置键，重命名显示文字不更改旧配置含义。
+适用版本：**1.9.1**。在 OTD 的 Filters 中选择 Precision Control (TingAlex Enhanced)。界面采用八组编号前缀与悬停解释；下表的 Property ID 是稳定配置键，重命名显示文字不更改旧配置含义。
 
 ## 01 书写范围 / Writing range
 

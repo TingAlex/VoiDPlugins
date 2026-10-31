@@ -1,6 +1,6 @@
 # Build, test and package Precision Control
 
-Current source version: **1.9.0**. The plugin targets net6.0 for the retained OpenTabletDriver SDK. Developer SDK/runtime requirements are separate from those of your installed OTD.
+Current source version: **1.9.1**. The plugin targets net6.0 for the retained OpenTabletDriver SDK. Developer SDK/runtime requirements are separate from those of your installed OTD.
 
 ## Build and tests
 

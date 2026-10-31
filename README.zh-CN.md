@@ -10,7 +10,7 @@
 
 ## 当前版本与获取方式
 
-源码版本 **1.9.0**，开发分支 [feature/touchpad-three-finger-drag](https://github.com/TingAlex/VoiDPlugins/tree/feature/touchpad-three-finger-drag)。
+源码版本 **1.9.1**，开发分支 [feature/touchpad-three-finger-drag](https://github.com/TingAlex/VoiDPlugins/tree/feature/touchpad-three-finger-drag)。
 
 2026-10-22 核对：GitHub 的 Latest 下载仍为 **v1.0.0**，不包含后续旋钮、笔键和设置整理。新版源码与旧下载包有区别，请按[构建指南](docs/DEVELOPMENT.md)生成当前版本，或使用版本对应的维护者安装包。[发行页面](https://github.com/TingAlex/VoiDPlugins/releases)
 
