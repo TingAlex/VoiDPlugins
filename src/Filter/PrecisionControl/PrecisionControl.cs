@@ -49,6 +49,18 @@ namespace VoiDPlugins.Filter
         public const string CurrentMousePositionAnchor = "Current Mouse Position";
 
         public static string[] ValidGlobalHotkeyKeys => GlobalHotkeyKeyMap.Keys.ToArray();
+        public static string[] ValidTouchpadDragAxes =>
+            new[]
+            {
+                TouchpadAxisLock,
+                TouchpadAxisFree,
+                TouchpadAxisHorizontal,
+                TouchpadAxisVertical
+            };
+        public const string TouchpadAxisLock = "锁定主方向";
+        public const string TouchpadAxisFree = "自由（斜向）";
+        public const string TouchpadAxisHorizontal = "仅水平";
+        public const string TouchpadAxisVertical = "仅竖直";
         public static string[] ValidPositioningModes =>
             new[] { ScreenRelativeMode, PointerAnchoredMode };
         public static string[] ValidActivationAnchorSources =>

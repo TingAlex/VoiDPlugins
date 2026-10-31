@@ -95,7 +95,7 @@ namespace PrecisionControl.Tests
             var groups = properties.Select(p => p.GetCustomAttribute<PropertyAttribute>()!.DisplayName.Split(' ')[0])
                 .Distinct().ToArray();
             Assert.Equal(new[] { "01", "02", "03", "04", "05", "06", "07", "08" }, groups);
-            Assert.Equal(26, properties.Length);
+            Assert.Equal(29, properties.Length);
             Assert.All(properties, p =>
             {
                 Assert.False(string.IsNullOrWhiteSpace(p.GetCustomAttribute<ToolTipAttribute>()?.ToolTip));
@@ -106,4 +106,5 @@ namespace PrecisionControl.Tests
         }
     }
 }
+
 

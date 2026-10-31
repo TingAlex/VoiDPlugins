@@ -10,7 +10,7 @@
 
 ## 当前版本与获取方式
 
-源码版本 **1.8.0**，开发分支 [feature/touchpad-three-finger-drag](https://github.com/TingAlex/VoiDPlugins/tree/feature/touchpad-three-finger-drag)。
+源码版本 **1.9.0**，开发分支 [feature/touchpad-three-finger-drag](https://github.com/TingAlex/VoiDPlugins/tree/feature/touchpad-three-finger-drag)。
 
 2026-10-22 核对：GitHub 的 Latest 下载仍为 **v1.0.0**，不包含后续旋钮、笔键和设置整理。新版源码与旧下载包有区别，请按[构建指南](docs/DEVELOPMENT.md)生成当前版本，或使用版本对应的维护者安装包。[发行页面](https://github.com/TingAlex/VoiDPlugins/releases)
 
@@ -50,7 +50,7 @@
 | 05 边框外观 | 轮廓、颜色、不透明度、线宽 |
 | 06 键盘快捷键 | 映射开关、鼠标重定位及主键 |
 | 07 组合修饰键 | 快捷键共用的 Ctrl / Alt / Shift / Windows |
-| 08 触控板拖框 | 三指拖移开关、移动倍率与段落步长 |
+| 08 触控板拖框 | 三指拖移开关、移动倍率、段落步长与方向锁定 |
 
 每项都有悬停说明。[完整设置表](docs/SETTINGS.md)列出默认值、适用条件与参数之间的关系。
 
@@ -70,7 +70,7 @@
 - Windows 边框与全局快捷键依赖 Win32。混合 DPI、多屏、其他应用及新机器完整安装仍需验证。
 - 某些设备会在笔悬停时抑制触控板；先把笔移出感应区再用触控板，这是当前工作流接受的操作顺序。
 
-当前 Precision Control 套件 **212 项测试**涵盖映射、笔键隔离、设置默认值与保留的页面实验。模拟测试不等于全部硬件或应用验证；舒适度描述来自作者使用反馈。
+当前 Precision Control 套件 **220 项测试**涵盖映射、笔键隔离、设置默认值与保留的页面实验。模拟测试不等于全部硬件或应用验证；舒适度描述来自作者使用反馈。
 
 ## 项目与反馈
 

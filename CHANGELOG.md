@@ -3,6 +3,17 @@
 All notable changes to Precision Control (TingAlex Enhanced) are documented in
 this file.
 
+## [1.9.0] - 2026-10-31
+
+- Add axis control for the touchpad drag, evaluated in raw device units so a
+  non-square display gain cannot bias the decision: 锁定主方向 (rail),
+  自由（斜向）, 仅水平 and 仅竖直.
+- Rail mode exposes 锁轴比例 (1-5, default 1.5) and 换轴比例 (1.2-6, default 2.5)
+  so vertical drags ignore small horizontal drift while deliberate switches still
+  work; switching re-baselines to avoid jumps.
+- 220 tests pass, including dominance lock, diagonal passthrough, axis switching,
+  forced axes, unknown-mode fallback and looser lock ratios.
+
 ## [1.8.0] - 2026-10-31
 
 - Widen the touchpad drag gain range to 0.02-5 (was 0.05-3) so slow precision

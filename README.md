@@ -10,7 +10,7 @@ The workflow comes from Wacom PTK-670 and OneNote use: write a line, lift, shift
 
 ## Version and downloads
 
-Source version **1.8.0** on [feature/touchpad-three-finger-drag](https://github.com/TingAlex/VoiDPlugins/tree/feature/touchpad-three-finger-drag).
+Source version **1.9.0** on [feature/touchpad-three-finger-drag](https://github.com/TingAlex/VoiDPlugins/tree/feature/touchpad-three-finger-drag).
 
 Checked on 2026-10-22: the public Latest asset is still **v1.0.0**, which predates the later dial, pen-button and settings updates. [Build the current source](docs/DEVELOPMENT.md) or use a matching maintainer-supplied package. Do not confuse the source version with an older [release download](https://github.com/TingAlex/VoiDPlugins/releases).
 
@@ -43,7 +43,7 @@ The Chinese settings page has hover explanations and eight numbered groups:
 | 05 Border appearance | Visibility, color, opacity and width |
 | 06 Keyboard shortcuts | Mapping toggle and mouse reposition |
 | 07 Shared modifiers | Ctrl / Alt / Shift / Windows |
-| 08 Touchpad drag | Three-finger toggle, movement gain and detent step |
+| 08 Touchpad drag | Three-finger toggle, gain, detent step and axis locking |
 
 [The field reference](docs/SETTINGS.md) includes property IDs, defaults and conditions.
 
@@ -61,7 +61,7 @@ OpenTabletDriver is required; the local workflow uses 0.6.7, PTK-670 and Windows
 
 Enhanced borders and global hotkeys use Windows APIs. Other tablets, apps, mixed DPI and multiple monitors need their own checks. If pen proximity suppresses a physical touchpad, move the pen out of range before touchpad navigation.
 
-The Precision Control suite has **212 tests** for mapping, input isolation, defaults and retained experimental behavior. Test doubles do not establish universal device support. Comfort claims describe the author's experience.
+The Precision Control suite has **220 tests** for mapping, input isolation, defaults and retained experimental behavior. Test doubles do not establish universal device support. Comfort claims describe the author's experience.
 
 See the [setup guide](docs/SETUP.md) and [release status](docs/RELEASE-PLAN.zh-CN.md). Issues were disabled on this fork when checked on 2026-10-22; feedback should include versions, tablet, output mode, DPI and reproducible steps without private note content.
 

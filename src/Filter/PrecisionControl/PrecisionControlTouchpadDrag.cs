@@ -13,6 +13,13 @@ namespace VoiDPlugins.Filter
         Dragging
     }
 
+    internal enum TouchpadDragDirection
+    {
+        None,
+        Horizontal,
+        Vertical
+    }
+
     // Three/four-finger touchpad drag that moves the real screen mapping rectangle.
     // The raw-input capture lives in TouchpadRawInputListener; this file only turns
     // contact frames into mapping translations, so it stays hardware-free and testable.
@@ -95,6 +102,7 @@ namespace VoiDPlugins.Filter
                 _touchpadStartCentroid = centroid;
                 _touchpadStartBounds = _precisionBounds;
                 _touchpadTravel = 0;
+                _touchpadAxis = TouchpadDragDirection.None;
                 Log.Debug(
                     nameof(PrecisionControl),
                     $"Touchpad drag started with {fingerCount} contacts.");
@@ -117,8 +125,14 @@ namespace VoiDPlugins.Filter
 
             var gainX = (double)_outputArea.Width * sensitivity / frame.HorizontalRange;
             var gainY = (double)_outputArea.Height * sensitivity / frame.VerticalRange;
-            var offsetX = Math.Round((centroid.X - _touchpadStartCentroid.X) * gainX);
-            var offsetY = Math.Round((centroid.Y - _touchpadStartCentroid.Y) * gainY);
+
+            // Axis policy works in raw device units, so a non-square display gain cannot
+            // bias the decision towards the wider screen axis.
+            var rawX = (double)centroid.X - _touchpadStartCentroid.X;
+            var rawY = (double)centroid.Y - _touchpadStartCentroid.Y;
+            var (allowX, allowY) = ResolveTouchpadDragAxis(rawX, rawY, centroid);
+            var offsetX = allowX ? Math.Round(rawX * gainX) : 0d;
+            var offsetY = allowY ? Math.Round(rawY * gainY) : 0d;
 
             // Optional detents: the rectangle moves in whole steps instead of following
             // the fingers continuously. 10% extra travel is required before a step flips,
@@ -147,6 +161,83 @@ namespace VoiDPlugins.Filter
 
             if (deltaX != 0 || deltaY != 0)
                 TranslateArea((int)deltaX, (int)deltaY);
+        }
+
+        private (bool AllowX, bool AllowY) ResolveTouchpadDragAxis(
+            double rawX,
+            double rawY,
+            Vector2 centroid)
+        {
+            var mode = TouchpadDragAxis;
+            if (string.Equals(mode, TouchpadAxisHorizontal, StringComparison.Ordinal))
+                return (true, false);
+
+            if (string.Equals(mode, TouchpadAxisVertical, StringComparison.Ordinal))
+                return (false, true);
+
+            if (!string.Equals(mode, TouchpadAxisLock, StringComparison.Ordinal))
+                return (true, true); // free diagonal (or an unknown value from an old profile)
+
+            var lockRatio = float.IsFinite(TouchpadDragAxisLockRatio)
+                ? Math.Clamp((double)TouchpadDragAxisLockRatio, 1d, 5d)
+                : 1.5d;
+            var releaseRatio = float.IsFinite(TouchpadDragAxisReleaseRatio)
+                ? Math.Clamp((double)TouchpadDragAxisReleaseRatio, 1.2d, 6d)
+                : 2.5d;
+
+            var horizontal = Math.Abs(rawX);
+            var vertical = Math.Abs(rawY);
+
+            switch (_touchpadAxis)
+            {
+                case TouchpadDragDirection.None:
+                    if (Math.Max(horizontal, vertical) < 1d)
+                        return (false, false);
+                    if (Math.Max(horizontal, vertical) >= Math.Min(horizontal, vertical) * lockRatio)
+                    {
+                        _touchpadAxis = horizontal >= vertical
+                            ? TouchpadDragDirection.Horizontal
+                            : TouchpadDragDirection.Vertical;
+                        // Keep the dominant-axis displacement that proved the direction;
+                        // drop only the minor-axis part so the axis starts clean.
+                        return _touchpadAxis == TouchpadDragDirection.Horizontal
+                            ? (true, false)
+                            : (false, true);
+                    }
+
+                    return (true, true);
+
+                case TouchpadDragDirection.Horizontal:
+                    if (vertical > horizontal * releaseRatio)
+                    {
+                        _touchpadAxis = TouchpadDragDirection.Vertical;
+                        RebaselineTouchpadDrag(centroid);
+                        return (false, false);
+                    }
+
+                    return (true, false);
+
+                case TouchpadDragDirection.Vertical:
+                    if (horizontal > vertical * releaseRatio)
+                    {
+                        _touchpadAxis = TouchpadDragDirection.Horizontal;
+                        RebaselineTouchpadDrag(centroid);
+                        return (false, false);
+                    }
+
+                    return (false, true);
+
+                default:
+                    return (true, true);
+            }
+        }
+
+        private void RebaselineTouchpadDrag(Vector2 centroid)
+        {
+            _touchpadStartCentroid = centroid;
+            _touchpadStartBounds = _precisionBounds;
+            _touchpadStepX = 0;
+            _touchpadStepY = 0;
         }
 
         private static double QuantizeStep(ref int appliedSteps, double offset, double step)
@@ -194,6 +285,7 @@ namespace VoiDPlugins.Filter
                 Log.Debug(nameof(PrecisionControl), "Touchpad drag ended.");
             _touchpadDragPhase = TouchpadDragPhase.Idle;
             _touchpadTravel = 0;
+            _touchpadAxis = TouchpadDragDirection.None;
             _touchpadStepX = 0;
             _touchpadStepY = 0;
         }
@@ -210,6 +302,7 @@ namespace VoiDPlugins.Filter
         private Vector2 _touchpadStartCentroid;
         private OverlayBounds _touchpadStartBounds;
         private float _touchpadTravel;
+        private TouchpadDragDirection _touchpadAxis;
         private int _touchpadStepX;
         private int _touchpadStepY;
         private int[] _touchpadLastIds = Array.Empty<int>();

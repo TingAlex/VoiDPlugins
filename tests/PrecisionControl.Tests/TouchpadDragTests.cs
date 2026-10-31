@@ -257,6 +257,133 @@ namespace PrecisionControl.Tests
             Assert.Equal(committed, overlay.Bounds);
         }
 
+        [Fact]
+        public void LockedAxisIgnoresSmallCrossAxisDrift()
+        {
+            using var filter = PrepareTouchpadDrag(out var overlay);
+            var original = overlay.Bounds;
+            filter.TouchpadDragAxis = VoiDPlugins.Filter.PrecisionControl.TouchpadAxisLock;
+            filter.TouchpadDragAxisLockRatio = 1.5f;
+
+            filter.HandleTouchpadFrame(Frame(0, 0, 0));
+            filter.HandleTouchpadFrame(Frame(10, 0, 100)); // starts a vertical drag
+            filter.HandleTouchpadFrame(Frame(20, 5, 200)); // locks vertical, 53 px down
+            Assert.Equal(original.Left, overlay.Bounds.Left);
+            Assert.Equal(original.Top + 53, overlay.Bounds.Top);
+
+            filter.HandleTouchpadFrame(Frame(30, 10, 300)); // 105 px down, 4.7 px right ignored
+            Assert.Equal(original.Left, overlay.Bounds.Left);
+            Assert.Equal(original.Top + 105, overlay.Bounds.Top);
+        }
+
+        [Fact]
+        public void ComparableAxesStayDiagonalUntilOneDominates()
+        {
+            using var filter = PrepareTouchpadDrag(out var overlay);
+            var original = overlay.Bounds;
+            filter.TouchpadDragAxis = VoiDPlugins.Filter.PrecisionControl.TouchpadAxisLock;
+
+            filter.HandleTouchpadFrame(Frame(0, 0, 0));
+            filter.HandleTouchpadFrame(Frame(10, 100, 100));
+            filter.HandleTouchpadFrame(Frame(20, 200, 200));
+            Assert.Equal(original.Left + 94, overlay.Bounds.Left);
+            Assert.Equal(original.Top + 53, overlay.Bounds.Top);
+        }
+
+        [Fact]
+        public void LockedAxisSwitchesOnlyWhenOtherAxisExceedsReleaseRatio()
+        {
+            using var filter = PrepareTouchpadDrag(out var overlay);
+            var original = overlay.Bounds;
+            filter.TouchpadDragAxis = VoiDPlugins.Filter.PrecisionControl.TouchpadAxisLock;
+            filter.TouchpadDragAxisReleaseRatio = 2.5f;
+
+            filter.HandleTouchpadFrame(Frame(0, 0, 0));
+            filter.HandleTouchpadFrame(Frame(10, 0, 100));
+            filter.HandleTouchpadFrame(Frame(20, 5, 200)); // locks vertical
+            filter.HandleTouchpadFrame(Frame(30, 5, 300)); // 105 px down
+            Assert.Equal(original.Top + 105, overlay.Bounds.Top);
+
+            filter.HandleTouchpadFrame(Frame(40, 800, 310)); // clear horizontal intent
+            Assert.Equal(original.Left, overlay.Bounds.Left);
+            filter.HandleTouchpadFrame(Frame(50, 900, 310)); // 94 px right after rebaseline
+            Assert.Equal(original.Left + 94, overlay.Bounds.Left);
+            Assert.Equal(original.Top + 105, overlay.Bounds.Top);
+        }
+
+        [Fact]
+        public void ForcedHorizontalModeIgnoresVerticalMovement()
+        {
+            using var filter = PrepareTouchpadDrag(out var overlay);
+            var original = overlay.Bounds;
+            filter.TouchpadDragAxis = VoiDPlugins.Filter.PrecisionControl.TouchpadAxisHorizontal;
+
+            filter.HandleTouchpadFrame(Frame(0, 0, 0));
+            filter.HandleTouchpadFrame(Frame(10, 100, 0));
+            filter.HandleTouchpadFrame(Frame(20, 100, 300));
+            Assert.Equal(original.Top, overlay.Bounds.Top);
+            filter.HandleTouchpadFrame(Frame(30, 200, 300));
+            Assert.Equal(original.Left + 94, overlay.Bounds.Left);
+        }
+
+        [Fact]
+        public void ForcedVerticalModeIgnoresHorizontalMovement()
+        {
+            using var filter = PrepareTouchpadDrag(out var overlay);
+            var original = overlay.Bounds;
+            filter.TouchpadDragAxis = VoiDPlugins.Filter.PrecisionControl.TouchpadAxisVertical;
+
+            filter.HandleTouchpadFrame(Frame(0, 0, 0));
+            filter.HandleTouchpadFrame(Frame(10, 0, 100));
+            filter.HandleTouchpadFrame(Frame(20, 300, 100));
+            Assert.Equal(original.Left, overlay.Bounds.Left);
+            filter.HandleTouchpadFrame(Frame(30, 300, 200));
+            Assert.Equal(original.Top + 53, overlay.Bounds.Top);
+        }
+
+        [Fact]
+        public void FreeModeKeepsBothAxes()
+        {
+            using var filter = PrepareTouchpadDrag(out var overlay);
+            var original = overlay.Bounds;
+            filter.TouchpadDragAxis = VoiDPlugins.Filter.PrecisionControl.TouchpadAxisFree;
+
+            filter.HandleTouchpadFrame(Frame(0, 0, 0));
+            filter.HandleTouchpadFrame(Frame(10, 100, 100));
+            filter.HandleTouchpadFrame(Frame(20, 200, 200));
+            Assert.Equal(original.Left + 94, overlay.Bounds.Left);
+            Assert.Equal(original.Top + 53, overlay.Bounds.Top);
+        }
+
+        [Fact]
+        public void UnknownAxisValueFallsBackToFreeMovement()
+        {
+            using var filter = PrepareTouchpadDrag(out var overlay);
+            var original = overlay.Bounds;
+            filter.TouchpadDragAxis = "旧配置里的未知值";
+
+            filter.HandleTouchpadFrame(Frame(0, 0, 0));
+            filter.HandleTouchpadFrame(Frame(10, 100, 100));
+            filter.HandleTouchpadFrame(Frame(20, 200, 200));
+            Assert.Equal(original.Left + 94, overlay.Bounds.Left);
+            Assert.Equal(original.Top + 53, overlay.Bounds.Top);
+        }
+
+        [Fact]
+        public void HigherLockRatioAllowsLooserDiagonalMovement()
+        {
+            using var filter = PrepareTouchpadDrag(out var overlay);
+            var original = overlay.Bounds;
+            filter.TouchpadDragAxis = VoiDPlugins.Filter.PrecisionControl.TouchpadAxisLock;
+            filter.TouchpadDragAxisLockRatio = 5f;
+
+            filter.HandleTouchpadFrame(Frame(0, 0, 0));
+            filter.HandleTouchpadFrame(Frame(10, 100, 200));
+            filter.HandleTouchpadFrame(Frame(20, 200, 400)); // ratio 2 < 5, no lock
+            Assert.Equal(original.Left + 94, overlay.Bounds.Left);
+            Assert.Equal(original.Top + 105, overlay.Bounds.Top);
+        }
+
         private static void DragTo(
             VoiDPlugins.Filter.PrecisionControl filter,
             TestOverlay overlay,

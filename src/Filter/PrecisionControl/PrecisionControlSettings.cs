@@ -120,6 +120,19 @@ namespace VoiDPlugins.Filter
         [SliderProperty("08 触控板拖框 · 段落步长（像素，0=连续）", 0f, 500f, 0f), DefaultPropertyValue(0f)]
         public float TouchpadDragStepPixels { get; set; }
 
+        [ToolTip("三指拖框的方向限制。锁定主方向：先判断主要往哪边动，之后只沿该轴移动，适合竖直换行不受左右抖动影响；自由（斜向）保留两轴同时移动；仅水平/仅竖直强制单轴。默认锁定主方向。")]
+        [Property("08 触控板拖框 · 方向限制"), PropertyValidated(nameof(ValidTouchpadDragAxes))]
+        [DefaultPropertyValue(TouchpadAxisLock)]
+        public string? TouchpadDragAxis { get; set; } = TouchpadAxisLock;
+
+        [ToolTip("锁定主方向时的锁轴门槛：主方向位移达到次方向的这个倍数才算“明确方向”。1.0–5.0，默认 1.5；越小越容易锁轴、斜向越难保留。")]
+        [SliderProperty("08 触控板拖框 · 锁轴比例", 1f, 5f, 1.5f), DefaultPropertyValue(1.5f)]
+        public float TouchpadDragAxisLockRatio { get; set; } = 1.5f;
+
+        [ToolTip("已锁轴后要换方向，另一轴位移必须超过本轴的这个倍数。1.2–6.0，默认 2.5；越大越“黏”，抖动越不可能带偏方向。")]
+        [SliderProperty("08 触控板拖框 · 换轴比例（越大越黏）", 1.2f, 6f, 2.5f), DefaultPropertyValue(2.5f)]
+        public float TouchpadDragAxisReleaseRatio { get; set; } = 2.5f;
+
         // Hidden from the generated settings UI; 3 is the requested gesture,
         // other counts can be set through the profile JSON.
         public int TouchpadDragFingers { get; set; } = 3;
