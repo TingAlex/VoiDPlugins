@@ -4,5 +4,5 @@ contact_links:
     url: https://github.com/users/TingAlex/projects/2
     about: 查看当前里程碑、优先级与进行中的工作
   - name: 触控板拖框文档 / Touchpad drag docs
-    url: https://github.com/TingAlex/VoiDPlugins/blob/feature/touchpad-three-finger-drag/docs/TOUCHPAD-DRAG.zh-CN.md
+    url: https://github.com/TingAlex/VoiDPlugins/blob/master/docs/TOUCHPAD-DRAG.zh-CN.md
     about: 参数含义、判定逻辑、推荐组合与故障排查

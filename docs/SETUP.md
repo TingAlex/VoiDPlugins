@@ -12,7 +12,7 @@ Verify ordinary tablet input first. Configure your output mode and its prerequis
 
 ## 2. 安装或升级插件
 
-2026-10-22 核对的公开 Latest 下载为 v1.0.0；当前 1.9.1 源码需要自行构建或使用相同版本的维护者安装包。
+公开 Latest 为 **v1.9.1**（2026-11-12），下载对应安装包即可；也可以按[开发指南](DEVELOPMENT.md)自行构建。
 
 1. 退出 OTD 界面及后台 Daemon。
 2. 备份实际数据目录中的 settings.json 和整个 Precision Control 插件文件夹。
