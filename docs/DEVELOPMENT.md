@@ -87,6 +87,11 @@ are an environment limit, not a plugin defect.
 
 ## Contribution and release checks
 
+Repository conventions, the project board and the handoff checklist live in
+[CONTRIBUTING.md](../CONTRIBUTING.md); milestones and known limits are in
+[ROADMAP.md](ROADMAP.md).
+
+
 Keep changes focused on the Precision Control workflow. Before pushing, run the relevant tests, validate local Markdown links and review staged files for local settings/logs/probes. The normal package must keep page navigation off and hidden. CI builds retained upstream modules and runs the Precision Control/WindowsInk suites.
 
 A source push, a PR merge and a downloadable GitHub Release are different publication steps. Track their actual status in [RELEASE-PLAN.zh-CN.md](RELEASE-PLAN.zh-CN.md); never label an untested device combination as verified.

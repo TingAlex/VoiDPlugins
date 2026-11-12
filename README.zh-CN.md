@@ -72,6 +72,10 @@
 
 当前 Precision Control 套件 **220 项测试**涵盖映射、笔键隔离、设置默认值与保留的页面实验。模拟测试不等于全部硬件或应用验证；舒适度描述来自作者使用反馈。
 
+## 开发与路线图
+
+构建、测试、打包与交接约定见 [贡献指南](CONTRIBUTING.md)；当前里程碑、已知限制与下一步见 [路线图](docs/ROADMAP.md)。开发看板：[Precision Control Roadmap](https://github.com/users/TingAlex/projects/2)。诊断探针在 [tools/](tools/README.md)，不随插件包发布。
+
 ## 项目与反馈
 
 [发布状态](docs/RELEASE-PLAN.zh-CN.md)区分源码更新、安装包和设备验证。2026-10-22 核对时本 fork 的 Issues 尚未开启；反馈材料可包含插件/OTD/Windows 版本、设备、输出模式、DPI 和复现步骤，并去除笔记内容等隐私。

@@ -1,0 +1,67 @@
+name: Bug report / 问题反馈
+description: 报告可复现的问题（崩溃、映射错误、拖框异常等）
+title: "[Bug] "
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        感谢反馈。请尽量填写环境与复现步骤；硬件相关的问题请注明设备与连接方式。
+        提交前请确认：笔已离开感应区（系统会抑制悬停时的触控板），并已查看 OTD 日志。
+  - type: input
+    id: plugin-version
+    attributes:
+      label: 插件版本
+      description: OTD 插件目录 metadata.json 或设置页显示的版本
+      placeholder: 1.9.1
+    validations:
+      required: true
+  - type: input
+    id: otd-version
+    attributes:
+      label: OpenTabletDriver 版本
+      placeholder: 0.6.7
+    validations:
+      required: true
+  - type: input
+    id: windows-version
+    attributes:
+      label: Windows 版本与构建号
+      placeholder: Windows 11 24H2 26100.xxxx
+    validations:
+      required: true
+  - type: input
+    id: hardware
+    attributes:
+      label: 数位板 / 触控板
+      description: 型号 + 连接方式；触控板请说明 USB 还是蓝牙
+      placeholder: Wacom PTK-670 + Magic Trackpad（蓝牙）
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: |
+        1. 笔移出感应区
+        2. Ctrl+Alt+Shift+P 启用小范围映射
+        3. 三指拖动……
+    validations:
+      required: true
+  - type: textarea
+    id: expected-actual
+    attributes:
+      label: 期望结果 vs 实际结果
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: 相关日志（可选）
+      description: "%LOCALAPPDATA%\\OpenTabletDriver\\Logs 里 PrecisionControl 组的行；请删除笔记内容等隐私"
+      render: text
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: 确认
+      options:
+        - label: 已搜索现有 issue 与 docs/TOUCHPAD-DRAG.zh-CN.md 的故障排查表
+        - label: 已确认问题在最新版本（或注明版本）

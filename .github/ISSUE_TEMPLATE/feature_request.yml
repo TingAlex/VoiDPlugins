@@ -1,0 +1,52 @@
+name: Feature request / 功能建议
+description: 提出新功能或体验改进（拖框、映射、设置、文档等）
+title: "[Feature] "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        请先查看 [路线图](../docs/ROADMAP.md) 与 [开发看板](https://github.com/users/TingAlex/projects/2)，避免重复。
+  - type: textarea
+    id: problem
+    attributes:
+      label: 要解决的问题
+      description: 当前工作流哪里不顺手？在什么场景下出现？
+      placeholder: 例如：竖直拖框时会带入轻微左右偏移……
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 期望的行为 / 方案
+      description: 可以是交互描述、参数范围、默认值建议
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: 验收标准
+      description: 怎样算完成？尽量写成可检查的条目
+      placeholder: |
+        - [ ] 竖直拖动 10 次，横向偏移 < 1 px
+        - [ ] 0 = 关闭该行为
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: 影响范围
+      multiple: true
+      options:
+        - 触控板拖框
+        - 笔键 / 笔输入
+        - 映射与缩放
+        - 边框与快捷键
+        - 文档
+        - 构建 / 发布
+  - type: checkboxes
+    id: hardware
+    attributes:
+      label: 验证条件
+      options:
+        - label: 该功能需要真实数位板/触控板验证（请在 issue 中说明需要的设备）

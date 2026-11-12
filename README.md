@@ -55,6 +55,10 @@ The source includes double-tap contact page panning, stationary touch release an
 
 In **1.6.0 page navigation is disabled by default and its settings are hidden**. Old experimental JSON values cannot enable it. The implementation and tests remain available to developers; mapping tap/drag controls remain exposed. See [experimental page navigation](docs/EXPERIMENTAL-PAGE-PAN.md).
 
+## Development and roadmap
+
+Build, test, packaging and handoff conventions are in [CONTRIBUTING](CONTRIBUTING.md); current milestones and known limits are in [ROADMAP](docs/ROADMAP.md). Work is tracked on the [project board](https://github.com/users/TingAlex/projects/2). Diagnostic probes live in [tools/](tools/README.md) and are not shipped with the plugin.
+
 ## Requirements and verification
 
 OpenTabletDriver is required; the local workflow uses 0.6.7, PTK-670 and Windows Ink Absolute Mode. Configure WindowsInk, its VMulti prerequisite and the Pen Tip binding separately. This package installs none of those dependencies.
