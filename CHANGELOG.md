@@ -3,6 +3,18 @@
 All notable changes to Precision Control (TingAlex Enhanced) are documented in
 this file.
 
+## [1.9.2] - Unreleased
+
+- Read each contact's HID Tip Switch instead of treating every reported ID/X/Y
+  record as a touching finger. A lift can still report three records; it now
+  ends dragging before the previous pending target can be committed.
+- Assemble all declared contact records, including Tip=0 release records, before
+  gesture processing. Keep partial frames per device and reject stale,
+  mismatched-scan and duplicate-ID continuations instead of mixing coordinates.
+- Add release regressions for each finger, continuous/40 px detents, simultaneous
+  lift and split reports. All 236 automated tests pass; physical release behavior
+  remains unverified. The frame probe now prints touching count and Tip state.
+
 ## [1.9.1] - 2026-10-31
 
 - Fix the small jump/flicker when the three fingers lift: every frame's target is

@@ -75,6 +75,27 @@ namespace VoiDPlugins.Filter
             _threadId = GetCurrentThreadId();
             try
             {
+                // These HID parser exports are supported since Windows 2000 and do
+                // not require foreground focus. Check availability before capture.
+                if (!NativeLibrary.TryLoad("hid.dll", out var hidLibrary))
+                {
+                    _registrationError = 126; // ERROR_MOD_NOT_FOUND
+                    return;
+                }
+                try
+                {
+                    if (!NativeLibrary.TryGetExport(hidLibrary, "HidP_GetUsages", out _) ||
+                        !NativeLibrary.TryGetExport(hidLibrary, "HidP_MaxUsageListLength", out _))
+                    {
+                        _registrationError = 127; // ERROR_PROC_NOT_FOUND
+                        return;
+                    }
+                }
+                finally
+                {
+                    NativeLibrary.Free(hidLibrary);
+                }
+
                 _className = "VoiDPrecisionControlTouchpad_" + Guid.NewGuid().ToString("N");
                 var windowClass = new WndClassEx
                 {
@@ -224,10 +245,26 @@ namespace VoiDPlugins.Filter
                             out var contacts,
                             out var contactCount,
                             out var horizontalRange,
-                            out var verticalRange))
+                            out var verticalRange,
+                            out var scanTime))
+                    {
+                        if (!_loggedParseFailure)
+                        {
+                            _loggedParseFailure = true;
+                            Log.Write(nameof(PrecisionControl),
+                                "Touchpad contact report could not be decoded; pending drag movement discarded.",
+                                LogLevel.Warning);
+                        }
+                        parser.Assembler.Reset();
+                        Publish(Array.Empty<TouchpadContact>(), parser.HorizontalRange, parser.VerticalRange);
                         continue;
+                    }
 
-                    MergeContacts(contacts, contactCount, horizontalRange, verticalRange);
+                    var frame = parser.Assembler.AddReport(
+                        Environment.TickCount64, contacts, contactCount,
+                        horizontalRange, verticalRange, scanTime);
+                    if (frame != null)
+                        Publish(frame.Contacts, frame.HorizontalRange, frame.VerticalRange);
                 }
             }
             finally
@@ -248,61 +285,6 @@ namespace VoiDPlugins.Filter
 
             _parsers[device] = parser;
             return parser;
-        }
-
-        // Windows may split a multi-contact frame over more than one HID report: the first
-        // report carries the contact count with a partial list, later reports carry the
-        // remainder with a zero count. Merge them before publishing a frame.
-        private void MergeContacts(
-            List<TouchpadContact> contacts,
-            int contactCount,
-            int horizontalRange,
-            int verticalRange)
-        {
-            if (contactCount <= 0 && contacts.Count == 0)
-            {
-                _pendingContacts.Clear();
-                _pendingCount = 0;
-                Publish(Array.Empty<TouchpadContact>(), horizontalRange, verticalRange);
-                return;
-            }
-
-            if (contactCount > 0 && contacts.Count >= contactCount)
-            {
-                _pendingContacts.Clear();
-                _pendingCount = 0;
-                Publish(contacts.Take(contactCount).ToArray(), horizontalRange, verticalRange);
-                return;
-            }
-
-            if (contactCount > 0)
-            {
-                _pendingCount = contactCount;
-                _pendingContacts.Clear();
-                _pendingContacts.AddRange(contacts);
-                return;
-            }
-
-            foreach (var contact in contacts)
-            {
-                if (_pendingContacts.Any(candidate => candidate.ContactId == contact.ContactId))
-                    continue;
-                _pendingContacts.Add(contact);
-            }
-
-            if (_pendingCount > 0 && _pendingContacts.Count >= _pendingCount)
-            {
-                var merged = _pendingContacts.Take(_pendingCount).ToArray();
-                _pendingContacts.Clear();
-                _pendingCount = 0;
-                Publish(merged, horizontalRange, verticalRange);
-            }
-            else if (_pendingContacts.Count > 10)
-            {
-                // Never let a broken report stream grow without bound.
-                _pendingContacts.Clear();
-                _pendingCount = 0;
-            }
         }
 
         private void Publish(
@@ -332,12 +314,14 @@ namespace VoiDPlugins.Filter
             {
                 _preparsedData = preparsedData;
                 _valueCaps = valueCaps;
+                _buttonUsages = new ushort[HidP_MaxUsageListLength(HidpReportType.Input, 0x0D, preparsedData)];
                 HorizontalRange = ResolveRange(0x30);
                 VerticalRange = ResolveRange(0x31);
             }
 
             public int HorizontalRange { get; }
             public int VerticalRange { get; }
+            public TouchpadFrameAssembler Assembler { get; } = new();
 
             public static TouchpadDeviceParser? TryCreate(IntPtr device)
             {
@@ -376,10 +360,12 @@ namespace VoiDPlugins.Filter
                 out List<TouchpadContact> contacts,
                 out int contactCount,
                 out int horizontalRange,
-                out int verticalRange)
+                out int verticalRange,
+                out uint? scanTime)
             {
                 contacts = new List<TouchpadContact>(5);
-                contactCount = 0;
+                contactCount = -1;
+                scanTime = null;
                 horizontalRange = HorizontalRange;
                 verticalRange = VerticalRange;
 
@@ -406,6 +392,8 @@ namespace VoiDPlugins.Filter
                         {
                             if (valueCap.UsagePage == 0x0D && valueCap.Usage == 0x54)
                                 contactCount = (int)value;
+                            if (valueCap.UsagePage == 0x0D && valueCap.Usage == 0x56)
+                                scanTime = value;
                             continue;
                         }
 
@@ -429,11 +417,28 @@ namespace VoiDPlugins.Filter
                         }
                     }
 
-                    foreach (var slot in slots.OrderBy(pair => pair.Key).Select(pair => pair.Value))
+                    if (contactCount < 0)
+                        return false;
+
+                    foreach (var pair in slots.OrderBy(pair => pair.Key))
                     {
+                        var slot = pair.Value;
                         if (slot.ContactId is not { } id || slot.X is not { } x || slot.Y is not { } y)
                             continue;
-                        contacts.Add(new TouchpadContact(id, x, y));
+                        // Tip Switch is a one-bit HID button, not a value cap. An
+                        // absent usage after a successful read means Tip=0 (lift).
+                        // Keep the record until hybrid frame assembly is complete:
+                        // filtering it here would leave the declared count unfilled.
+                        var usageCount = (uint)_buttonUsages.Length;
+                        if (HidP_GetUsages(
+                                HidpReportType.Input, 0x0D, pair.Key, _buttonUsages,
+                                ref usageCount, _preparsedData, reportPointer,
+                                (uint)report.Length) != HidpStatusSuccess)
+                            return false;
+                        var isTipDown = false;
+                        for (var index = 0; index < usageCount; index++)
+                            isTipDown |= _buttonUsages[index] == 0x42;
+                        contacts.Add(new TouchpadContact(id, x, y, isTipDown));
                     }
 
                     return true;
@@ -475,10 +480,9 @@ namespace VoiDPlugins.Filter
 
             private IntPtr _preparsedData;
             private readonly HidpValueCaps[] _valueCaps;
+            private readonly ushort[] _buttonUsages;
         }
         private readonly Dictionary<IntPtr, TouchpadDeviceParser> _parsers = new();
-        private readonly List<TouchpadContact> _pendingContacts = new();
-        private int _pendingCount;
         private readonly Thread _thread;
         private readonly ManualResetEventSlim _ready = new(false);
         private readonly WindowProcedureDelegate _windowProcedure;
@@ -488,6 +492,7 @@ namespace VoiDPlugins.Filter
         private uint _threadId;
         private int _registrationError;
         private bool _loggedFirstFrame;
+        private bool _loggedParseFailure;
         private bool _disposed;
 
         private delegate IntPtr WindowProcedureDelegate(IntPtr window, uint message, UIntPtr wParam, IntPtr lParam);
@@ -690,6 +695,21 @@ namespace VoiDPlugins.Filter
 
         [DllImport("hid.dll", SetLastError = true)]
         private static extern uint HidP_GetCaps(IntPtr preparsedData, out HidpCaps caps);
+
+        [DllImport("hid.dll")]
+        private static extern uint HidP_MaxUsageListLength(
+            HidpReportType reportType, ushort usagePage, IntPtr preparsedData);
+
+        [DllImport("hid.dll")]
+        private static extern uint HidP_GetUsages(
+            HidpReportType reportType,
+            ushort usagePage,
+            ushort linkCollection,
+            [Out] ushort[] usageList,
+            ref uint usageLength,
+            IntPtr preparsedData,
+            IntPtr report,
+            uint reportLength);
 
         [DllImport("hid.dll", CharSet = CharSet.Auto, SetLastError = true)]
         private static extern uint HidP_GetValueCaps(

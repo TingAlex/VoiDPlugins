@@ -26,15 +26,16 @@ dotnet run --project tools/BleHidAccessProbe
 Each frame prints:
 
 ```text
-[      1234 ms] count=3 range=4096x4096 | #1=(1200,800), #2=(1500,900), #3=(1800,1000) | centroid=(1500.0,900.0)
+[      1234 ms] count=3 touching=2 range=4096x4096 | #1=(1200,800) tip=0, #2=(1500,900) tip=1, #3=(1800,1000) tip=1 | touching-centroid=(1650.0,950.0)
 ```
 
 ## Reading the output
 
 | Observation | Meaning |
 | --- | --- |
-| `count=3` with changing coordinates | The input layer is healthy; a missing gesture is a plugin-side state or settings issue. |
-| `count=0` when fingers lift | Expected; this frame ends the drag segment. |
+| `touching=3` with changing coordinates | Three actual surface contacts are available to the gesture logic. |
+| `count=3 touching=2`, one `tip=0` | A release record still contributes to HID Contact Count. This must end a three-finger drag before committing pending movement. |
+| `touching=0` when fingers lift | Expected, even when the frame still includes Tip=0 records. |
 | Registration failed (Win32 87/5) | Not an interactive desktop session, or the machine has no precision touchpad. |
 | No frames while touching | Pen may be hovering/blocking the touchpad, the device is not a precision touchpad, or another session owns the input. |
 
