@@ -7,7 +7,7 @@ Current source version: **1.9.2**. The plugin targets net6.0 for the retained Op
 Use Git with submodules and a .NET SDK/runtime capable of building and running net6.0:
 
 ~~~powershell
-git clone --recurse-submodules --branch agent/global-hotkey-precision-control https://github.com/TingAlex/VoiDPlugins.git
+git clone --recurse-submodules --branch master https://github.com/TingAlex/VoiDPlugins.git
 cd VoiDPlugins
 dotnet build src/Filter/PrecisionControl/PrecisionControl.csproj -c Release
 dotnet test tests/PrecisionControl.Tests/PrecisionControl.Tests.csproj -c Release
