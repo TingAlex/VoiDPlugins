@@ -12,7 +12,7 @@ Verify ordinary tablet input first. Configure your output mode and its prerequis
 
 ## 2. 安装或升级插件
 
-公开 Latest 为 **v1.9.1**（2026-11-12），下载对应安装包即可；也可以按[开发指南](DEVELOPMENT.md)自行构建。
+公开 Latest 为 **v1.9.2**（2026-11-15），下载对应安装包即可；也可以按[开发指南](DEVELOPMENT.md)自行构建。
 
 1. 退出 OTD 界面及后台 Daemon。
 2. 备份实际数据目录中的 settings.json 和整个 Precision Control 插件文件夹。
@@ -23,6 +23,8 @@ Verify ordinary tablet input first. Configure your output mode and its prerequis
 便携/自定义数据目录以实际位置为准。升级时显示名称会调整，配置属性 ID 保持稳定。
 
 1.7.0 新增三指触控板拖框（第 08 组，1.9.2 起默认开启），复用小范围映射矩形，不移动鼠标、不滚动页面；参数与调参见 [触控板三指拖框](TOUCHPAD-DRAG.zh-CN.md)。1.6.0 起不加载隐藏的页面拖移字段，旧的双击/滚动/防抖参数不会开启页面输入。普通笔键映射功能继续使用 EnablePenNavigation 与 EnablePenDrag。
+
+升级/回退也可使用安装包内的脚本，自动识别现有插件目录并备份。每台电脑的设置独立保留，不用默认值覆盖；详见[双机维护](MAINTENANCE.zh-CN.md)。
 
 ## 3. 推荐起始设置
 

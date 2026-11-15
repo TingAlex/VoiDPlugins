@@ -12,7 +12,7 @@ The workflow comes from Wacom PTK-670 and OneNote use: write a line, lift, shift
 
 Source version **1.9.2** on [master](https://github.com/TingAlex/VoiDPlugins/tree/master).
 
-Since 2026-11-12 the Latest release is **[v1.9.1](https://github.com/TingAlex/VoiDPlugins/releases/tag/v1.9.1)** (touchpad drag, detents, axis locking and the lift fix). Windows and source packages are on the [releases page](https://github.com/TingAlex/VoiDPlugins/releases); to build from source see [DEVELOPMENT](docs/DEVELOPMENT.md).
+Since 2026-11-15 the Latest release is **[v1.9.2](https://github.com/TingAlex/VoiDPlugins/releases/tag/v1.9.2)** (touchpad drag, detents, axis locking and the lift fix). Windows and source packages are on the [releases page](https://github.com/TingAlex/VoiDPlugins/releases); to build from source see [DEVELOPMENT](docs/DEVELOPMENT.md).
 
 ## What each control changes
 
@@ -48,6 +48,8 @@ The Chinese settings page has hover explanations and eight numbered groups:
 [The field reference](docs/SETTINGS.md) includes property IDs, defaults and conditions. The touchpad gesture model, axis rules and tuning recipes are in [touchpad drag (zh-CN)](docs/TOUCHPAD-DRAG.zh-CN.md).
 
 Defaults match the author's working profile: Pointer Anchored, scale 0.25, pointer anchor 4.5% / 8%, dial steps 40 pixels and opacity 0.4. Touchpad drag uses gain 1, 40-pixel detents and free diagonal movement. Explicit saved values are preserved; the page-pan experiment stays disabled.
+
+Upgrade and rollback preserve each computer's saved settings. See [two-machine maintenance (zh-CN)](docs/MAINTENANCE.zh-CN.md). Development is now focused on maintenance and the two existing machines.
 
 ## Retained page-pan experiment
 

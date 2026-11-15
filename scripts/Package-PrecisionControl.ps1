@@ -50,9 +50,11 @@ try {
         DownloadUrl = ''
         CompressionFormat = 'zip'
         SHA256 = ''
-        WikiUrl = 'https://github.com/TingAlex/VoiDPlugins/blob/agent/global-hotkey-precision-control/docs/SETUP.md'
+        WikiUrl = 'https://github.com/TingAlex/VoiDPlugins/blob/master/docs/SETUP.md'
         LicenseIdentifier = 'GPL-3.0-only'
     } | ConvertTo-Json | Set-Content -Encoding UTF8 (Join-Path $package 'plugin/metadata.json')
+    New-Item -ItemType Directory -Path (Join-Path $package 'scripts') | Out-Null
+    Copy-Item -LiteralPath (Join-Path $PSScriptRoot 'Install-PrecisionControl.ps1') -Destination (Join-Path $package 'scripts')
     foreach ($name in @('README.md','README.zh-CN.md','LICENSE','CHANGELOG.md','docs')) {
         Copy-Item -LiteralPath (Join-Path $repo $name) -Destination $package -Recurse
     }

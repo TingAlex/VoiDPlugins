@@ -3,8 +3,11 @@
 All notable changes to Precision Control (TingAlex Enhanced) are documented in
 this file.
 
-## [1.9.2] - Unreleased
+## [1.9.2] - 2026-11-15
 
+- Enter maintenance mode: retire obsolete branches and optional feature work.
+  Ship an installer/rollback script that discovers the existing plugin folder,
+  verifies backups and preserves each computer's settings.
 - Adopt the author's approved working defaults: Pointer Anchored, Scale 0.25,
   pointer anchor 4.5% / 8%, pen mapping controls and touchpad drag enabled,
   touchpad gain 1, detents 40 px and free diagonal movement. Keep saved values,
