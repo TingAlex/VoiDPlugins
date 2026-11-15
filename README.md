@@ -10,7 +10,7 @@ The workflow comes from Wacom PTK-670 and OneNote use: write a line, lift, shift
 
 ## Version and downloads
 
-Source version **1.9.1** on [master](https://github.com/TingAlex/VoiDPlugins/tree/master).
+Source version **1.9.2** on [master](https://github.com/TingAlex/VoiDPlugins/tree/master).
 
 Since 2026-11-12 the Latest release is **[v1.9.1](https://github.com/TingAlex/VoiDPlugins/releases/tag/v1.9.1)** (touchpad drag, detents, axis locking and the lift fix). Windows and source packages are on the [releases page](https://github.com/TingAlex/VoiDPlugins/releases); to build from source see [DEVELOPMENT](docs/DEVELOPMENT.md).
 
@@ -26,7 +26,7 @@ Since 2026-11-12 the Latest release is **[v1.9.1](https://github.com/TingAlex/Vo
 | Ctrl + Alt + Shift + P | Toggle precision mapping and its border |
 | Ctrl + Alt + Shift + R | Enable or reposition the mapping at the mouse |
 
-Pen-button features are off by default and require button 3 to be unbound in ordinary bindings. Dial bindings are configured separately. Active-stroke or inactive-mapping dial input is discarded, with no later replay.
+Pen-button mapping controls and three-finger touchpad drag are enabled by default. Button 3 must be unbound in ordinary bindings. Dial bindings are configured separately. Active-stroke or inactive-mapping dial input is discarded, with no later replay.
 
 Hiding the border alone leaves the mapping active. Exiting precision mapping restores the original output range. Mapping scale does not change OneNote zoom.
 
@@ -47,7 +47,7 @@ The Chinese settings page has hover explanations and eight numbered groups:
 
 [The field reference](docs/SETTINGS.md) includes property IDs, defaults and conditions. The touchpad gesture model, axis rules and tuning recipes are in [touchpad drag (zh-CN)](docs/TOUCHPAD-DRAG.zh-CN.md).
 
-Suggested starting values: Pointer Anchored, scale 0.25, dial steps 40 pixels and opacity 0.4. Screen Relative (Legacy) remains the code default for compatibility; select Pointer Anchored explicitly.
+Defaults match the author's working profile: Pointer Anchored, scale 0.25, pointer anchor 4.5% / 8%, dial steps 40 pixels and opacity 0.4. Touchpad drag uses gain 1, 40-pixel detents and free diagonal movement. Explicit saved values are preserved; the page-pan experiment stays disabled.
 
 ## Retained page-pan experiment
 
@@ -65,9 +65,9 @@ OpenTabletDriver is required; the local workflow uses 0.6.7, PTK-670 and Windows
 
 Enhanced borders and global hotkeys use Windows APIs. Other tablets, apps, mixed DPI and multiple monitors need their own checks. If pen proximity suppresses a physical touchpad, move the pen out of range before touchpad navigation.
 
-The Precision Control suite has **220 tests** for mapping, input isolation, defaults and retained experimental behavior. Test doubles do not establish universal device support. Comfort claims describe the author's experience.
+The Precision Control suite has **237 tests** for mapping, input isolation, defaults and retained experimental behavior. Test doubles do not establish universal device support. Comfort claims describe the author's experience.
 
-See the [setup guide](docs/SETUP.md) and [release status](docs/RELEASE-PLAN.zh-CN.md). Issues were disabled on this fork when checked on 2026-10-22; feedback should include versions, tablet, output mode, DPI and reproducible steps without private note content.
+See the [setup guide](docs/SETUP.md) and [release status](docs/RELEASE-PLAN.zh-CN.md). Use GitHub Issues for feedback; include versions, tablet, output mode, DPI and reproducible steps without private note content.
 
 ## Credits
 

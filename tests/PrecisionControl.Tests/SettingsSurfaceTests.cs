@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Collections.Generic;
 using System.Reflection;
 using OpenTabletDriver.Plugin.Attributes;
 using VoiDPlugins.Filter;
@@ -9,6 +10,64 @@ namespace PrecisionControl.Tests
 {
     public sealed partial class PrecisionControlTests
     {
+        [Fact]
+        public void StartupAndOtdMetadataDefaultsMatchApprovedWorkingProfile()
+        {
+            // Approved from the running profile on 2026-11-15. OTD uses attribute
+            // defaults; direct construction uses initializers. Check both paths.
+            var approved = new Dictionary<string, object>
+            {
+                ["Scale"] = 0.25f,
+                ["PositioningMode"] = "Pointer Anchored",
+                ["ActivationAnchorSource"] = "Last Active Pointer",
+                ["PointerPositionXPercent"] = 4.5f,
+                ["PointerPositionYPercent"] = 8f,
+                ["HorizontalDialStep"] = 40f,
+                ["VerticalDialStep"] = 40f,
+                ["EnablePenNavigation"] = true,
+                ["PenNavigationHoldMilliseconds"] = 300f,
+                ["EnablePenDrag"] = true,
+                ["PenDragSensitivity"] = 1f,
+                ["ShowBorder"] = true,
+                ["BorderColor"] = "#000000",
+                ["BorderOpacity"] = 0.4f,
+                ["BorderThickness"] = 2f,
+                ["EnableGlobalHotkey"] = true,
+                ["GlobalHotkeyKey"] = "P",
+                ["EnableRepositionHotkey"] = true,
+                ["RepositionHotkeyKey"] = "R",
+                ["HotkeyCtrl"] = true,
+                ["HotkeyAlt"] = true,
+                ["HotkeyShift"] = true,
+                ["HotkeyWindows"] = false,
+                ["EnableTouchpadDrag"] = true,
+                ["TouchpadDragSensitivity"] = 1f,
+                ["TouchpadDragStepPixels"] = 40f,
+                ["TouchpadDragAxis"] = "自由（斜向）",
+                ["TouchpadDragAxisLockRatio"] = 1.5f,
+                ["TouchpadDragAxisReleaseRatio"] = 2.5f,
+                ["EnableNudgeHotkeys"] = true,
+                ["NudgeUpKey"] = "Up",
+                ["NudgeDownKey"] = "Down",
+                ["NudgeLeftKey"] = "Left",
+                ["NudgeRightKey"] = "Right",
+                ["HorizontalNudgePercent"] = 20f,
+                ["VerticalNudgePercent"] = 20f,
+                ["TouchpadDragFingers"] = 3
+            };
+            using var filter = new VoiDPlugins.Filter.PrecisionControl();
+            foreach (var (name, expected) in approved)
+            {
+                var property = filter.GetType().GetProperty(name)!;
+                Assert.Equal(expected, property.GetValue(filter));
+                if (property.GetCustomAttribute<PropertyAttribute>() != null)
+                    Assert.Equal(expected, property.GetCustomAttribute<DefaultPropertyValueAttribute>()!.Value);
+            }
+            Assert.All(filter.GetType().GetProperties().Where(p => p.GetCustomAttribute<PropertyAttribute>() != null),
+                property => Assert.True(approved.ContainsKey(property.Name), property.Name));
+            Assert.False(filter.EnablePenPageNavigation);
+        }
+
         [Fact]
         public void PageNavigationIsOffByDefaultAndCannotBeConfiguredByOtdMetadata()
         {

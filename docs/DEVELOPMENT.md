@@ -1,6 +1,6 @@
 # Build, test and package Precision Control
 
-Current source version: **1.9.1**. The plugin targets net6.0 for the retained OpenTabletDriver SDK. Developer SDK/runtime requirements are separate from those of your installed OTD.
+Current source version: **1.9.2**. The plugin targets net6.0 for the retained OpenTabletDriver SDK. Developer SDK/runtime requirements are separate from those of your installed OTD.
 
 ## Build and tests
 
@@ -21,7 +21,7 @@ git submodule update --init --recursive
 
 The DLL is produced at src/Filter/PrecisionControl/bin/Release/net6.0/PrecisionControl.dll. Follow [SETUP.md](SETUP.md) with OTD stopped.
 
-The **191-test** Precision Control suite covers mapping, dial movement, hotkeys, report isolation, tap/contact controls, UI metadata/defaults and the retained page-pan experiment. Experiment fixtures explicitly opt in; normal filters cannot inject page input. Run the separate WindowsInk suite when changing that module:
+The **237-test** Precision Control suite covers mapping, dial movement, hotkeys, report isolation, tap/contact controls, UI metadata/defaults and the retained page-pan experiment. Experiment fixtures explicitly opt in; normal filters cannot inject page input. Run the separate WindowsInk suite when changing that module:
 
 ~~~powershell
 dotnet test tests/WindowsInk.Tests/WindowsInk.Tests.csproj -c Release
@@ -34,7 +34,7 @@ Physical pen input, real border appearance, fresh-machine installation and appli
 | Area | Responsibility |
 | --- | --- |
 | PrecisionControl.cs | Existing mapping state, actions, coordinate transform and pipeline |
-| PrecisionControlSettings.cs | All 23 visible settings declared in seven-group display order |
+| PrecisionControlSettings.cs | All 29 visible settings declared in eight-group display order |
 | PrecisionControlPenDrag.cs | Third-button contact mapping drag and pressure isolation |
 | PrecisionControlPenNavigation.cs | Normal short-tap mapping control; experimental legacy hover route behind gate |
 | PrecisionControlContactNavigation.cs | Retained double-tap contact page mode and stationary release |
@@ -51,7 +51,7 @@ OTD's property metadata controls both generated UI and configuration loading. Re
 
 The internal EnablePenPageNavigation gate defaults to false and is not an OTD property. Page fields have no Property attributes. To exercise the retained implementation, tests or a deliberate development build must set that gate in code; JSON alone does not enable it. See [EXPERIMENTAL-PAGE-PAN.md](EXPERIMENTAL-PAGE-PAN.md).
 
-Public property IDs remain unchanged when labels/groups change. Keep the seven-group reference and tooltips synchronized with [SETTINGS.md](SETTINGS.md). Slider attribute defaults and DefaultPropertyValue must agree.
+Public property IDs remain unchanged when labels/groups change. Keep the eight-group reference and tooltips synchronized with [SETTINGS.md](SETTINGS.md). Slider attribute defaults and DefaultPropertyValue must agree.
 
 ## Distribution package
 

@@ -1,6 +1,6 @@
 # 安装与使用 / Install and use
 
-适用源码版本：**1.9.1**。完整字段解释见 [设置参考](SETTINGS.md)，编译与打包见 [开发指南](DEVELOPMENT.md)。
+适用源码版本：**1.9.2**。完整字段解释见 [设置参考](SETTINGS.md)，编译与打包见 [开发指南](DEVELOPMENT.md)。
 
 ## 1. 先确认普通书写正常
 
@@ -22,7 +22,7 @@ Verify ordinary tablet input first. Configure your output mode and its prerequis
 
 便携/自定义数据目录以实际位置为准。升级时显示名称会调整，配置属性 ID 保持稳定。
 
-1.7.0 新增可选的三指触控板拖框（第 08 组，默认关闭），复用小范围映射矩形，不移动鼠标、不滚动页面；参数与调参见 [触控板三指拖框](TOUCHPAD-DRAG.zh-CN.md)。1.6.0 起不加载隐藏的页面拖移字段，旧的双击/滚动/防抖参数不会开启页面输入。普通笔键映射功能继续使用 EnablePenNavigation 与 EnablePenDrag。
+1.7.0 新增三指触控板拖框（第 08 组，1.9.2 起默认开启），复用小范围映射矩形，不移动鼠标、不滚动页面；参数与调参见 [触控板三指拖框](TOUCHPAD-DRAG.zh-CN.md)。1.6.0 起不加载隐藏的页面拖移字段，旧的双击/滚动/防抖参数不会开启页面输入。普通笔键映射功能继续使用 EnablePenNavigation 与 EnablePenDrag。
 
 ## 3. 推荐起始设置
 
@@ -31,11 +31,11 @@ Verify ordinary tablet input first. Configure your output mode and its prerequis
 | 01 书写范围 · 坐标映射方式 | Pointer Anchored | 原输出坐标按比例进入整个小框 |
 | 01 书写范围 · 缩放比例 | 0.25 | 宽高各约为原输出的四分之一 |
 | 02 初始位置 · 参考指针来源 | Last Active Pointer | 使用最近活动的笔或鼠标 |
-| 02 初始位置 · 横向/竖向位置 | 10% / 10% | 参考指针靠近框的左上角；50%/50% 为中心 |
+| 02 初始位置 · 横向/竖向位置 | 4.5% / 8% | 参考指针靠近框的左上角；50%/50% 为中心 |
 | 03 旋钮移动 · 水平/竖直步长 | 40 / 40 | 每次旋钮触发移动的屏幕像素 |
 | 05 边框外观 | 黑色、0.4、2 px | 看见映射范围，不压暗文档 |
 
-代码默认映射方式仍为 Screen Relative (Legacy)，用于兼容旧配置。主动选择 Pointer Anchored 后，重新启用映射；Scale、初始位置的修改也在下一次启用时生效。以上建议不会自动覆盖旧配置。
+1.9.2 起默认使用上表参数；笔键与三指拖框默认开启，三指倍率 1、段落步长 40 像素、自由斜向。已有明确保存的设置继续生效；Scale、映射方式和初始位置的修改在下一次启用时生效。
 
 ## 4. 旋钮移动映射框
 
@@ -52,7 +52,7 @@ Verify ordinary tablet input first. Configure your output mode and its prerequis
 
 ## 5. 第三笔键控制映射
 
-第 04 组的两个开关独立，默认均关闭；需要报告中有第三笔键，并将其普通 Binding 留空。
+第 04 组的两个开关独立，1.9.2 起默认均开启；需要报告中有第三笔键，并将其普通 Binding 留空。
 
 | 选项/动作 | 结果 |
 | --- | --- |

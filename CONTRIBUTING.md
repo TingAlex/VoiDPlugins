@@ -35,7 +35,7 @@ pwsh scripts/Package-PrecisionControl.ps1
 | 路径 | 内容 |
 | --- | --- |
 | `src/Filter/PrecisionControl/` | 插件源码（映射、边框、笔键、触控板拖框） |
-| `tests/PrecisionControl.Tests/` | xUnit 测试（当前 220 项） |
+| `tests/PrecisionControl.Tests/` | xUnit 测试（当前 237 项） |
 | `docs/` | 安装、设置、触控板拖框、开发、路线图 |
 | `tools/` | 诊断探针，不随插件包发布 |
 | `.github/workflows/` | 构建、测试与发布工作流 |
@@ -49,7 +49,7 @@ pwsh scripts/Package-PrecisionControl.ps1
 
 ## 5. PR 检查清单
 
-- [ ] `dotnet test` 通过（当前 220 项）
+- [ ] `dotnet test` 通过（当前 237 项）
 - [ ] 行为、默认值、设置范围变化时，同步更新 `docs/SETTINGS.md`、`docs/TOUCHPAD-DRAG.zh-CN.md`、`CHANGELOG.md`
 - [ ] 涉及硬件行为时，注明“已实机验证”或“待验证”；模拟测试不能写成硬件通过
 - [ ] 相对 Markdown 链接有效
