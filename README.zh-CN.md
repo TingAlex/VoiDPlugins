@@ -12,7 +12,7 @@
 
 源码版本 **1.9.2**，[master](https://github.com/TingAlex/VoiDPlugins/tree/master)。
 
-2026-11-12 起，GitHub 的 Latest 为 **[v1.9.1](https://github.com/TingAlex/VoiDPlugins/releases/tag/v1.9.1)**，包含触控板三指拖框、段落感、方向锁定与抬指修复；安装包与源码包见[发行页面](https://github.com/TingAlex/VoiDPlugins/releases)。需要自行构建时见[构建指南](docs/DEVELOPMENT.md)。
+2026-11-15 起，GitHub 的 Latest 为 **[v1.9.2](https://github.com/TingAlex/VoiDPlugins/releases/tag/v1.9.2)**，包含触控板三指拖框、段落感、方向锁定与抬指修复；安装包与源码包见[发行页面](https://github.com/TingAlex/VoiDPlugins/releases)。需要自行构建时见[构建指南](docs/DEVELOPMENT.md)。
 
 ## 三种操作分别改变什么
 
@@ -55,6 +55,8 @@
 每项都有悬停说明。[完整设置表](docs/SETTINGS.md)列出默认值、适用条件与参数之间的关系；三指拖框的判定与调参见 [触控板三指拖框](docs/TOUCHPAD-DRAG.zh-CN.md)。
 
 默认参数沿用作者当前实际使用配置：Pointer Anchored、比例 0.25、框内指针位置 4.5% / 8%、旋钮步长 40、边框不透明度 0.4；三指拖框倍率 1、步长 40 像素、自由斜向。已有明确保存的值继续生效，页面拖移实验保持关闭。
+
+当前进入维护期；升级与回退保留每台电脑自己的参数，见[双机维护说明](docs/MAINTENANCE.zh-CN.md)。
 
 ## 页面拖移实验的状态
 
