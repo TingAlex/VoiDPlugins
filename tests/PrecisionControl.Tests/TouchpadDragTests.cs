@@ -8,7 +8,7 @@ namespace PrecisionControl.Tests
     public sealed partial class PrecisionControlTests
     {
         [Fact]
-        public void TouchpadDragIsOptIn()
+        public void DisablingTouchpadDragLeavesMappingUnchanged()
         {
             using var filter = CreateFilter(out _, out var overlay);
             var original = ActivateMapping(filter, overlay);

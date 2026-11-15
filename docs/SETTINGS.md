@@ -1,13 +1,15 @@
 # 设置参考 / Settings reference
 
-适用版本：**1.9.1**。在 OTD 的 Filters 中选择 Precision Control (TingAlex Enhanced)。界面采用八组编号前缀与悬停解释；下表的 Property ID 是稳定配置键，重命名显示文字不更改旧配置含义。
+适用版本：**1.9.2**。在 OTD 的 Filters 中选择 Precision Control (TingAlex Enhanced)。界面采用八组编号前缀与悬停解释；下表的 Property ID 是稳定配置键，重命名显示文字不更改旧配置含义。
+
+2026-11-15 起，默认参数采用作者当前实际使用配置。新加插件、缺少配置值或重置默认时使用这些值；已明确保存的设置不会被批量覆盖。29 项可见参数与隐藏的方向微移默认值均已核对，页面拖移实验保持关闭。
 
 ## 01 书写范围 / Writing range
 
 | 界面字段 | Property ID | 默认值 | 作用与生效时机 |
 | --- | --- | --- | --- |
-| 缩放比例 | Scale | 0.3 | 小范围宽/高相对原输出的倍率。0.25 表示宽高各 25%，不是文档缩放。为兼容旧配置保留 0–10 范围，通常从 0.25 开始；改后重新启用映射 |
-| 坐标映射方式 | PositioningMode | Screen Relative (Legacy) | 推荐主动选择 Pointer Anchored，将原输出坐标映射进整个框；Legacy 保留旧相对位移算法。改后重新启用 |
+| 缩放比例 | Scale | 0.25 | 小范围宽/高相对原输出的倍率。0.25 表示宽高各 25%，不是文档缩放。为兼容旧配置保留 0–10 范围，通常从 0.25 开始；改后重新启用映射 |
+| 坐标映射方式 | PositioningMode | Pointer Anchored | 将原输出坐标映射进整个框；Legacy 保留旧相对位移算法，已保存的选择继续生效。改后重新启用 |
 
 如果只想改变接下来写的位置，移动映射框；如果要浏览文档，使用触控板。比例与框位置是两个不同参数。
 
@@ -16,8 +18,8 @@
 | 界面字段 | Property ID | 默认值 | 作用与条件 |
 | --- | --- | --- | --- |
 | 参考指针来源 | ActivationAnchorSource | Last Active Pointer | 启用映射时参考最近活动的笔/鼠标。Last Pen Position 用上次笔位置，Current Mouse Position 用当前鼠标。仅影响启用位置 |
-| 指针在框内的横向位置（%） | PointerPositionXPercent | 10 | Pointer Anchored 专用：0 为左边，50 为中间，100 为右边 |
-| 指针在框内的竖向位置（%） | PointerPositionYPercent | 10 | Pointer Anchored 专用：0 为顶边，50 为中间，100 为底边 |
+| 指针在框内的横向位置（%） | PointerPositionXPercent | 4.5 | Pointer Anchored 专用：0 为左边，50 为中间，100 为右边 |
+| 指针在框内的竖向位置（%） | PointerPositionYPercent | 8 | Pointer Anchored 专用：0 为顶边，50 为中间，100 为底边 |
 
 百分比决定框如何围绕参考指针放置，不移动指针，也不改变框尺寸。鼠标重定位快捷键始终参考鼠标，不受“参考指针来源”的选择影响。改后重新启用映射。
 
@@ -34,9 +36,9 @@
 
 | 界面字段 | Property ID | 默认值 | 作用与条件 |
 | --- | --- | --- | --- |
-| 短按切换映射 | EnablePenNavigation | 关闭 | 第三笔键悬空短按并松开，立即启用/退出小范围映射 |
+| 短按切换映射 | EnablePenNavigation | 开启 | 第三笔键悬空短按并松开，立即启用/退出小范围映射 |
 | 短按时长上限（毫秒） | PenNavigationHoldMilliseconds | 300 | 150–800。按住到松开必须短于此值；超时不切换。它是识别上限，不是等待计时 |
-| 按住贴板拖框 | EnablePenDrag | 关闭 | 小范围启用后按住第三键，用笔尖贴板滑动移动映射；抬笔可换位 |
+| 按住贴板拖框 | EnablePenDrag | 开启 | 小范围启用后按住第三键，用笔尖贴板滑动移动映射；抬笔可换位 |
 | 拖框移动倍率 | PenDragSensitivity | 1 | 0.1–5，按原输出坐标计算拖框位移；和 Scale、旋钮步长分开 |
 
 两个开关独立。第三笔键的普通 Binding 须留空，设备报告需实际含第三键。悬空晃动不否决短按；长按/接触/取消不触发短按。松键仍贴板时屏蔽接触尾部，松键并抬笔后恢复书写。已有笔画中才按键不会抢走当前笔画。
@@ -80,14 +82,14 @@
 
 | 界面字段 | Property ID | 默认值 | 作用与条件 |
 | --- | --- | --- | --- |
-| 启用三指拖移 | EnableTouchpadDrag | 关闭 | 小范围映射启用、笔离开感应区时，三指在精确触控板上拖动即移动实际映射框；抬指即停，不做惯性或补放 |
-| 移动倍率 | TouchpadDragSensitivity | 0.25 | 0.02–5。1 表示横向划满触控板一次等于移动一个输出区域宽度；0.25 约等于一个映射框宽度 |
-| 段落步长（像素，0=连续） | TouchpadDragStepPixels | 0 | 0–500。大于 0 时映射框按该像素数一格一格跳动，每格需多推 10% 才切换；0 为连续拖动 |
-| 方向限制 | TouchpadDragAxis | 锁定主方向 | 锁定主方向 / 自由（斜向）/ 仅水平 / 仅竖直。锁定后只沿主方向移动；斜向仍可在未锁定时保留 |
+| 启用三指拖移 | EnableTouchpadDrag | 开启 | 小范围映射启用、笔离开感应区时，三指在精确触控板上拖动即移动实际映射框；抬指即停，不做惯性或补放 |
+| 移动倍率 | TouchpadDragSensitivity | 1 | 0.02–5。1 表示横向划满触控板一次等于移动一个输出区域宽度；0.25 约等于一个映射框宽度 |
+| 段落步长（像素，0=连续） | TouchpadDragStepPixels | 40 | 0–500。大于 0 时映射框按该像素数一格一格跳动，每格需多推 10% 才切换；0 为连续拖动 |
+| 方向限制 | TouchpadDragAxis | 自由（斜向） | 锁定主方向 / 自由（斜向）/ 仅水平 / 仅竖直。锁定后只沿主方向移动；斜向仍可在未锁定时保留 |
 | 锁轴比例 | TouchpadDragAxisLockRatio | 1.5 | 1–5。主方向位移需达到次方向的多少倍才锁轴；越小越容易锁、斜向越难保留 |
 | 换轴比例（越大越黏） | TouchpadDragAxisReleaseRatio | 2.5 | 1.2–6。已锁定时另一轴位移需超过本轴的倍数才换向；越大越不可能被抖动带偏 |
 
-需要 Windows 精确触控板（Precision Touchpad）。后台通过 Raw Input 读取触点，不抢焦点、不移动鼠标、不滚动页面；建议把 Windows 三指手势设为无操作，以免同时触发系统动作。参与手指数默认 3，可在配置 JSON 中用 TouchpadDragFingers 改为 2–5。笔接触书写、映射关闭、笔键拖框进行中都会结束或忽略三指拖框。判定细节、推荐组合与调参顺序见 [触控板三指拖框](TOUCHPAD-DRAG.zh-CN.md)。
+需要 Windows 精确触控板（Precision Touchpad）。后台通过 Raw Input 读取触点，不抢焦点、不移动鼠标、不滚动页面；建议把 Windows 三指手势设为无操作，以免同时触发系统动作。参与手指数默认 3，可在配置 JSON 中用 TouchpadDragFingers 改为 2–5。笔接触书写、映射关闭、笔键拖框进行中都会结束或忽略三指拖框。1.9.2 按 Tip Switch 判断实际接触数，任一参与手指抬起即结束并丢弃待提交位移；Scale 和倍率算法不变，本机用户反馈抬手修复效果良好；其他设备/条件仍需验证。判定细节、推荐组合与调参顺序见 [触控板三指拖框](TOUCHPAD-DRAG.zh-CN.md)。
 
 ## 已保留但未展示的页面实验
 

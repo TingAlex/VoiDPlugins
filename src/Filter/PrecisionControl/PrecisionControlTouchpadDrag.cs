@@ -54,8 +54,10 @@ namespace VoiDPlugins.Filter
                 : frame.TimestampMilliseconds - _touchpadLastFrameTimestamp;
             _touchpadLastFrameTimestamp = frame.TimestampMilliseconds;
 
-            var contacts = frame.Contacts;
-            if (contacts.Count != fingerCount)
+            // Contact Count includes the final Tip=0 record for a departing finger.
+            // Check actual surface contacts before committing even the pending target.
+            var contacts = frame.Contacts.Where(contact => contact.IsTipDown).ToArray();
+            if (contacts.Length != fingerCount)
             {
                 EndTouchpadDrag();
                 _touchpadLastIds = Array.Empty<int>();
@@ -110,8 +112,8 @@ namespace VoiDPlugins.Filter
                 return;
             }
 
-            // Commit the previous frame first, so a pending target is never lost when the
-            // current frame switches axis or ends the gesture.
+            // Only another valid frame with the same touching fingers confirms the
+            // previous target. Release/count/ID changes above discard it instead.
             ApplyPendingTouchpadTarget();
 
             var sensitivity = TouchpadDragSensitivity;
@@ -161,9 +163,8 @@ namespace VoiDPlugins.Filter
                 return;
             }
 
-            // Park this frame's target; the next frame (or a switch) commits it. A lift
-            // always ends the gesture before its predecessor is committed, so the
-            // finger-release movement that used to show up as a jump at lift is dropped.
+            // Park this frame's target until another valid same-contact frame arrives.
+            // Release records are checked above, before any pending movement is applied.
             _pendingTouchpadLeft = (int)targetLeft;
             _pendingTouchpadTop = (int)targetTop;
             _hasPendingTouchpadTarget = true;

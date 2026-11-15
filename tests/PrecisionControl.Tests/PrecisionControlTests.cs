@@ -125,10 +125,10 @@ namespace PrecisionControl.Tests
             Assert.Equal("#000000", filter.BorderColor);
             Assert.Equal(0.4f, filter.BorderOpacity);
             Assert.Equal(
-                VoiDPlugins.Filter.PrecisionControl.ScreenRelativeMode,
+                VoiDPlugins.Filter.PrecisionControl.PointerAnchoredMode,
                 filter.PositioningMode);
-            Assert.Equal(10f, filter.PointerPositionXPercent);
-            Assert.Equal(10f, filter.PointerPositionYPercent);
+            Assert.Equal(4.5f, filter.PointerPositionXPercent);
+            Assert.Equal(8f, filter.PointerPositionYPercent);
             Assert.Equal(
                 VoiDPlugins.Filter.PrecisionControl.LastActivePointerAnchor,
                 filter.ActivationAnchorSource);
@@ -713,6 +713,15 @@ namespace PrecisionControl.Tests
             var filter = new VoiDPlugins.Filter.PrecisionControl
             {
                 Scale = 0.25f,
+                // Mapping tests use an explicit legacy fixture. Production defaults
+                // are checked separately against the user's approved profile.
+                PositioningMode = VoiDPlugins.Filter.PrecisionControl.ScreenRelativeMode,
+                PointerPositionXPercent = 10f,
+                PointerPositionYPercent = 10f,
+                EnablePenNavigation = false,
+                EnablePenDrag = false,
+                EnableTouchpadDrag = false,
+                TouchpadDragStepPixels = 0f,
                 ShowBorder = true,
                 BorderThickness = 2,
                 BorderColor = "#000000",

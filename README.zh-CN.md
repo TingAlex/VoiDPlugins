@@ -10,7 +10,7 @@
 
 ## 当前版本与获取方式
 
-源码版本 **1.9.1**，[master](https://github.com/TingAlex/VoiDPlugins/tree/master)。
+源码版本 **1.9.2**，[master](https://github.com/TingAlex/VoiDPlugins/tree/master)。
 
 2026-11-12 起，GitHub 的 Latest 为 **[v1.9.1](https://github.com/TingAlex/VoiDPlugins/releases/tag/v1.9.1)**，包含触控板三指拖框、段落感、方向锁定与抬指修复；安装包与源码包见[发行页面](https://github.com/TingAlex/VoiDPlugins/releases)。需要自行构建时见[构建指南](docs/DEVELOPMENT.md)。
 
@@ -37,7 +37,7 @@
 | 按住第三笔键，贴板滑动 | 开启对应设置后拖框；抬笔可换位继续 |
 | 触控板三指拖动 | 开启设置后直接移动映射框；需笔离开感应区 |
 
-笔键操作默认关闭，旋钮需要在 Bindings 中另行绑定。第三笔键普通绑定应留空。正在书写时不执行旋钮移动，旧动作不排队到抬笔后补放。
+笔键映射操作与三指拖框默认开启，旋钮需要在 Bindings 中另行绑定。第三笔键普通绑定应留空。正在书写时不执行旋钮移动，旧动作不排队到抬笔后补放。
 
 ## 设置按用途分成八组
 
@@ -54,7 +54,7 @@
 
 每项都有悬停说明。[完整设置表](docs/SETTINGS.md)列出默认值、适用条件与参数之间的关系；三指拖框的判定与调参见 [触控板三指拖框](docs/TOUCHPAD-DRAG.zh-CN.md)。
 
-首次使用建议：Pointer Anchored、比例 0.25、旋钮步长 40、边框不透明度 0.4。为兼容旧配置，代码默认映射算法仍是 Screen Relative (Legacy)，需要主动选择 Pointer Anchored。
+默认参数沿用作者当前实际使用配置：Pointer Anchored、比例 0.25、框内指针位置 4.5% / 8%、旋钮步长 40、边框不透明度 0.4；三指拖框倍率 1、步长 40 像素、自由斜向。已有明确保存的值继续生效，页面拖移实验保持关闭。
 
 ## 页面拖移实验的状态
 
@@ -70,7 +70,7 @@
 - Windows 边框与全局快捷键依赖 Win32。混合 DPI、多屏、其他应用及新机器完整安装仍需验证。
 - 某些设备会在笔悬停时抑制触控板；先把笔移出感应区再用触控板，这是当前工作流接受的操作顺序。
 
-当前 Precision Control 套件 **220 项测试**涵盖映射、笔键隔离、设置默认值与保留的页面实验。模拟测试不等于全部硬件或应用验证；舒适度描述来自作者使用反馈。
+当前 Precision Control 套件 **237 项测试**涵盖映射、笔键隔离、设置默认值与保留的页面实验。模拟测试不等于全部硬件或应用验证；舒适度描述来自作者使用反馈。
 
 ## 开发与路线图
 
@@ -78,7 +78,7 @@
 
 ## 项目与反馈
 
-[发布状态](docs/RELEASE-PLAN.zh-CN.md)区分源码更新、安装包和设备验证。2026-10-22 核对时本 fork 的 Issues 尚未开启；反馈材料可包含插件/OTD/Windows 版本、设备、输出模式、DPI 和复现步骤，并去除笔记内容等隐私。
+[发布状态](docs/RELEASE-PLAN.zh-CN.md)区分源码更新、安装包和设备验证。使用 GitHub Issues 跟踪问题；反馈材料可包含插件/OTD/Windows 版本、设备、输出模式、DPI 和复现步骤，并去除笔记内容等隐私。
 
 基于 [X9VoiD/VoiDPlugins](https://github.com/X9VoiD/VoiDPlugins) 和 [OpenTabletDriver](https://opentabletdriver.net/)。仓库保留[其他上游模块](docs/OTHER-PLUGINS.md)，本说明与专用安装包聚焦 Precision Control。触控板触点捕获参考 [emoacht/RawInput.Touchpad](https://github.com/emoacht/RawInput.Touchpad) 与 [ClementGre/ThreeFingerDragOnWindows](https://github.com/ClementGre/ThreeFingerDragOnWindows)（均为 MIT 许可，文件头保留原版权声明）。
 

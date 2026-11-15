@@ -9,25 +9,27 @@ namespace VoiDPlugins.Filter
     // the contact model and the precision-touchpad report parsing follow the upstream sources.
     internal readonly struct TouchpadContact : IEquatable<TouchpadContact>
     {
-        public TouchpadContact(int contactId, int x, int y)
+        public TouchpadContact(int contactId, int x, int y, bool isTipDown = true)
         {
             ContactId = contactId;
             X = x;
             Y = y;
+            IsTipDown = isTipDown;
         }
 
         public int ContactId { get; }
         public int X { get; }
         public int Y { get; }
+        public bool IsTipDown { get; }
 
         public bool Equals(TouchpadContact other) =>
-            ContactId == other.ContactId && X == other.X && Y == other.Y;
+            ContactId == other.ContactId && X == other.X && Y == other.Y && IsTipDown == other.IsTipDown;
 
         public override bool Equals(object? obj) => obj is TouchpadContact other && Equals(other);
 
-        public override int GetHashCode() => HashCode.Combine(ContactId, X, Y);
+        public override int GetHashCode() => HashCode.Combine(ContactId, X, Y, IsTipDown);
 
-        public override string ToString() => $"ID {ContactId} ({X},{Y})";
+        public override string ToString() => $"ID {ContactId} ({X},{Y}) tip={IsTipDown}";
     }
 
     internal sealed class TouchpadFrame

@@ -9,7 +9,7 @@ using VoiDPlugins.Filter;
 Console.OutputEncoding = Encoding.UTF8;
 Console.WriteLine("Precision Control · 触控板帧探针 (TouchpadFrameProbe)");
 Console.WriteLine("复用插件的 Raw Input 监听（0x0D/0x05, RIDEV_INPUTSINK | RIDEV_DEVNOTIFY）。");
-Console.WriteLine("请把笔移出感应区，然后在触控板上用 3 指拖动；抬指会输出 count=0。");
+Console.WriteLine("请把笔移出感应区，然后在触控板上用 3 指拖动；抬指看 touching 数量与 tip 状态。");
 Console.WriteLine();
 
 var seconds = 0;
@@ -38,7 +38,8 @@ listener.FrameReceived += frame =>
     frames++;
     var contacts = frame.Contacts;
     var text = new StringBuilder();
-    text.Append($"[{frame.TimestampMilliseconds,10} ms] count={contacts.Count}");
+    var touching = contacts.Count(c => c.IsTipDown);
+    text.Append($"[{frame.TimestampMilliseconds,10} ms] count={contacts.Count} touching={touching}");
     text.Append($" range={frame.HorizontalRange}x{frame.VerticalRange}");
     if (contacts.Count > 0)
     {
@@ -50,12 +51,16 @@ listener.FrameReceived += frame =>
             var contact = contacts[index];
             if (index > 0)
                 text.Append(", ");
-            text.Append($"#{contact.ContactId}=({contact.X},{contact.Y})");
-            sumX += contact.X;
-            sumY += contact.Y;
+            text.Append($"#{contact.ContactId}=({contact.X},{contact.Y}) tip={(contact.IsTipDown ? 1 : 0)}");
+            if (contact.IsTipDown)
+            {
+                sumX += contact.X;
+                sumY += contact.Y;
+            }
         }
 
-        text.Append($" | centroid=({sumX / contacts.Count:0.0},{sumY / contacts.Count:0.0})");
+        if (touching > 0)
+            text.Append($" | touching-centroid=({sumX / touching:0.0},{sumY / touching:0.0})");
     }
 
     Console.WriteLine(text.ToString());

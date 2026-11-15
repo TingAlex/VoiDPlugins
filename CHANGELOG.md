@@ -3,6 +3,24 @@
 All notable changes to Precision Control (TingAlex Enhanced) are documented in
 this file.
 
+## [1.9.2] - Unreleased
+
+- Adopt the author's approved working defaults: Pointer Anchored, Scale 0.25,
+  pointer anchor 4.5% / 8%, pen mapping controls and touchpad drag enabled,
+  touchpad gain 1, detents 40 px and free diagonal movement. Keep saved values,
+  property IDs and the disabled page-navigation experiment unchanged.
+- The installed lift fix received positive feedback from the local user on
+  2026-11-15; this is not verification of other hardware or the full OneNote suite.
+- Read each contact's HID Tip Switch instead of treating every reported ID/X/Y
+  record as a touching finger. A lift can still report three records; it now
+  ends dragging before the previous pending target can be committed.
+- Assemble all declared contact records, including Tip=0 release records, before
+  gesture processing. Keep partial frames per device and reject stale,
+  mismatched-scan and duplicate-ID continuations instead of mixing coordinates.
+- Add release regressions for each finger, continuous/40 px detents, simultaneous
+  lift and split reports. All 237 automated tests pass, including startup/OTD
+  metadata parity against the approved working profile. The frame probe now prints touching count and Tip state.
+
 ## [1.9.1] - 2026-10-31
 
 - Fix the small jump/flicker when the three fingers lift: every frame's target is

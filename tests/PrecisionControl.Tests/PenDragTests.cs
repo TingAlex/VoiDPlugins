@@ -10,7 +10,7 @@ namespace PrecisionControl.Tests
     public sealed partial class PrecisionControlTests
     {
         [Fact]
-        public void PenDragIsOptInAndLeavesExistingPenInputUnchanged()
+        public void DisablingPenDragLeavesExistingPenInputUnchanged()
         {
             using var filter = CreateFilter(out _);
             Assert.False(filter.EnablePenDrag);
